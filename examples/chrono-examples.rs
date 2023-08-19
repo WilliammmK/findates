@@ -1,0 +1,25 @@
+// Will use this main function for just initial exploration of chrono
+// and its functionalities.
+use chrono::Days;
+use chrono::NaiveDate;
+use chrono::ParseError;
+
+
+fn main() {
+    // Creating a naive date struct
+    let my_first_date: Option<NaiveDate> = NaiveDate::from_ymd_opt(2023, 08, 07);
+    println!("{}", my_first_date.unwrap());
+    // Date of my marriage in ordinal
+    let date_from_ordinal: Option<NaiveDate> = NaiveDate::from_yo_opt(2019, 159);
+    println!("{}", date_from_ordinal.unwrap());
+    // Parsing from string
+    let date_from_string: Result<NaiveDate, ParseError> = NaiveDate::parse_from_str("29/07/2019", "%d/%m/%Y");
+    println!("{}", date_from_string.unwrap());
+    // Adding days to a date
+    let my_days: Days = Days::new(10);
+    let moved_date = my_first_date.unwrap().checked_add_days(my_days);
+    println!("{}", moved_date.unwrap());
+    // Successive Date
+    println!("{}",date_from_string.unwrap().succ_opt().unwrap());
+
+}
