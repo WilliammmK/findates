@@ -2,6 +2,8 @@
 
 use chrono::naive::NaiveDate;
 use std::fmt;
+use std::str::FromStr;
+use std::string::ParseError;
 
 /// Day count conventions enumeration. This will grow as more conventions are
 /// added into scope.
@@ -31,9 +33,26 @@ impl fmt::Display for DayCount {
     }
 }
 
+// type Err = ParseError;
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct ParseDayCountError;
 
 // !!! Implement the from_str trait
-
+impl FromStr for DayCount {
+    type Err = ParseDayCountError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Act360" => Ok(DayCount::Act360),
+            "Act365" => Ok(DayCount::Act365),
+            "Bd2532" => Ok(DayCount::Bd252),
+            "ActAct" => Ok(DayCount::ActAct),
+            "D30360" => Ok(DayCount::D30360),
+            "D30365" => Ok(DayCount::D30365),
+            _        => Err(ParseDayCountError)
+        }
+    }
+}
 
 
 /// Day count calculation from a start and an end date.
@@ -44,3 +63,5 @@ pub fn day_count_fraction (start_date: NaiveDate , end_date: NaiveDate,
 
     return 3.00;
 }
+
+
