@@ -5,17 +5,17 @@ use std::fmt;
 
 /// Day count conventions enumeration. This will grow as more conventions are
 /// added into scope.
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 pub enum DayCount {
     Act360,
     Act365,
     Bd252,
     ActAct,
     D30360,
-    D30365
-    
+    D30365    
 }
 
+/// # Trait Implementations 
 /// Display trait for the daycount enum. Keep it consistent with the actual variant.
 impl fmt::Display for DayCount {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -33,6 +33,8 @@ impl fmt::Display for DayCount {
 
 
 // !!! Implement the from_str trait
+
+
 
 /// Day count calculation from a start and an end date.
 /// !!! Add a calendar object
