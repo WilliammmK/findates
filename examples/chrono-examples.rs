@@ -1,3 +1,4 @@
+use chrono::Datelike;
 // Will use this main function for just initial exploration of chrono
 // and its functionalities.
 use chrono::Days;
@@ -17,9 +18,14 @@ fn main() {
     println!("{}", date_from_string.unwrap());
     // Adding days to a date
     let my_days: Days = Days::new(10);
-    let moved_date = my_first_date.unwrap().checked_add_days(my_days);
+    let moved_date: Option<NaiveDate> = my_first_date.unwrap().checked_add_days(my_days);
     println!("{}", moved_date.unwrap());
     // Successive Date
     println!("{}",date_from_string.unwrap().succ_opt().unwrap());
+
+    // Print out weekday for a given date
+    let wd: chrono::Weekday = date_from_ordinal.unwrap().weekday();
+    println!("{}",wd);
+
 
 }
