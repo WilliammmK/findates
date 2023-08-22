@@ -1,4 +1,4 @@
-use findates::daycount;
+use findates::conventions;
 
 #[cfg(test)]
 mod daycount_tests {
