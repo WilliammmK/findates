@@ -27,5 +27,12 @@ fn main() {
     let wd: chrono::Weekday = date_from_ordinal.unwrap().weekday();
     println!("{}",wd);
 
+    let day_of_date: u32 = date_from_string.unwrap().day();
+    println!("{}",day_of_date);
+    let month_of_date: u32 = date_from_string.unwrap().month();
+    println!("{}",month_of_date);
+    let year_of_date: i32 = date_from_string.unwrap().year();
+    println!("{}",year_of_date);
+
 
 }

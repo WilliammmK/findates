@@ -2,43 +2,106 @@
 //! "business days". These can be National or Local holidays usually,
 //! but any other day there might be no settlement or trading.
 
+use std::collections::HashSet;
+use std::hash::Hasher;
+use std::hash::Hash;
+use std::iter::Map;
+
+
 use chrono::Datelike;
 use chrono::Weekday;
 use chrono::NaiveDate;
 
-/// A basic calendar with Saturday and Sunday as non-working days.
-/// 
-#[derive(PartialEq, Eq, Clone, Debug, Hash)]
+use itertools::Itertools;
+
+/// A Calendar representation.
+/// Essentially a list of dates that are not
+/// "business days". These can be National or Local holidays usually,
+/// but any other day there might be no settlement or trading.
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Calendar {
-    pub weekend:   Vec<Weekday>,          // Which weekdays are not good working days
-    pub holidays:  Vec<NaiveDate>,        // Which days of the year are not good working days
-    pub propagate: Option<NaiveDate>      // Use the given holidays dates to propagate until the given date
+    pub weekend:   HashSet<Weekday>,          // Which weekdays are not good working days
+    pub holidays:  HashSet<NaiveDate>,        // Which days of the year are not good working days
+    
 }
+
 
 /// Creating a basic calendar with Saturdays and Sundays as weekend.
 pub fn basic_calendar() -> Calendar {
     let res: Calendar = Calendar { weekend: vec![ Weekday::Sat
-                                                , Weekday::Sun ]
-                                 , holidays: vec![]
-                                 , propagate: None };
+                                                , Weekday::Sun ].into_iter().collect()
+                                 , holidays: vec![].into_iter().collect() };
     return res;
 }
 
-/// Given a calendar, propagate the current Holiday list until the given target date.
-/// The function will simply take the Day and month of each holiday in the current list
-/// and replace the year for every year until the target date.
-/// Useful if only a list of holidays for the current year is available.
-/// If the target date is before the earliest holiday date, it back propagate the calendar.
-pub fn holiday_propagate (cal: Calendar, anchor_date: NaiveDate, target_date: NaiveDate) -> Calendar {
+impl Calendar {
+    /// Add Holidays to a calendar
+    pub fn add_holidays (mut self, holidays: Vec<NaiveDate>) {       
+        self.holidays.extend(holidays.iter());
+        let unique_holidays: Vec<NaiveDate> = self.holidays.into_iter().unique().collect();
+        self.holidays = unique_holidays;
 
-    return basic_calendar();
+    }
+    
+    /// Calendar Union
+    pub fn calendar_union (self, calendar: Calendar) {
+        let other_holidays: Vec<NaiveDate> = calendar.holidays;
+        self.add_holidays(other_holidays);
+        // !!! Implement for Weekends as well.
+       let other_weekends: Vec<Weekday> = calendar.weekend;
+       self.weekend.extend(iter)
+
+    }
+    
+
+
+    /// Given a calendar, propagate the current Holiday list until the given target date.
+    /// The function will simply take the Day and month of each holiday in the current list
+    /// and replace the year for every year until the target date.
+    /// Useful if only a list of holidays for the current year is available.
+    /// If the target date is before the earliest holiday date, it back propagate the calendar.
+    pub fn holiday_propagate (mut self, target_date: NaiveDate) {
+        // If no holidays in the calendar just return the calendar itself.
+        if self.holidays.is_empty() { return }
+        
+        else {
+            let target_year = target_date.year();
+            let hols_years = self.holidays.iter().map(|x: &NaiveDate| {x.year()});
+            let mut days_and_months =self.holidays.iter()
+                                                                    .map(|d: &NaiveDate| {(d.day(),d.month())});
+            let min_year: i32;
+            min_year = hols_years.min().unwrap_or(target_year);
+
+            // New holiday vector
+            let new_holidays: Vec<NaiveDate>;
+            
+            // Ok to just unwrap here as empty list has been already checked in the first if.
+            // Back propagate
+            if min_year > target_year {
+                let years: std::ops::Range<i32> = target_year .. min_year;
+                
+
+
+            } 
+            // Propagate
+            else if min_year == target_year{
+    
+            }
+
+        }
+
+        
+        
+        self.holidays = [].to_vec();        
+
+
+    return;
 }
 
-/// Calendar Union
-pub fn calendar_union (cal1: Calendar, cal2: Calendar) -> Calendar {
-    //let cal1
-    return basic_calendar();
+
+    
 }
+
 
 
 
@@ -79,6 +142,7 @@ mod tests {
 
     // Constructing a Basic UK calendar
 
+
     
     
     #[test]
@@ -88,6 +152,7 @@ mod tests {
         assert_eq!(false, calendar::is_business_day(my_date.unwrap(), &basic_cal));
         let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Mon);
         assert_eq!(true, calendar::is_business_day(my_date.unwrap(), &basic_cal));
+        
     }
 
 
