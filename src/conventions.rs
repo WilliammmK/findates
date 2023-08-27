@@ -63,7 +63,7 @@ pub enum  DayAdjust{
     Following,                  // Choose the first business day after the given holiday. 
     ModFollowing,               // Choose the first business day after the given holiday unless it belongs to a different month, in which case choose the first business day before the holiday. 
     Preceding,                  // Choose the first business day before the given holiday.
-    ModPreceding,              // Choose the first business day before the given holiday unless it belongs to a different month, in which case choose the first business day after the holiday.
+    ModPreceding,               // Choose the first business day before the given holiday unless it belongs to a different month, in which case choose the first business day after the holiday.
     Unadjusted,                 // Do not adjust.
     HalfMonthModFollowing,      // Choose the first business day after the given holiday unless that day crosses the mid-month (15th) or the end of month, in which case choose the first business day before the holiday. 
     Nearest                     // Choose the nearest business day to the given holiday. If both the preceding and following business days are equally far away, default to following business day. 
@@ -150,18 +150,69 @@ impl fmt::Display for Frequency {
     }
 }
 
+// Parsing error specific to DayAdjust
+#[derive(Debug, PartialEq, Eq)]
+pub struct ParseFrequencyError;
 
-// !!! FromStr implementation
+// FromStr trait implementation for DayAdjust
+impl FromStr for Frequency {
+    type Err = ParseFrequencyError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NoFrequency"           => Ok(Frequency::NoFrequency),
+            "Once"                  => Ok(Frequency::Once),
+            "Annual"                => Ok(Frequency::Annual),
+            "Semiannual"            => Ok(Frequency::Semiannual),
+            "EveryFourthMonth"      => Ok(Frequency::EveryFourthMonth),
+            "Quarterly"             => Ok(Frequency::Quarterly),
+            "Bimonthly"             => Ok(Frequency::Bimonthly),
+            "Monthly"               => Ok(Frequency::Monthly),
+            "EveryFourthWeek"       => Ok(Frequency::EveryFourthWeek),
+            "Biweekly"              => Ok(Frequency::Biweekly),
+            "Weekly"                => Ok(Frequency::Weekly),
+            "Daily"                 => Ok(Frequency::Daily),
+            "OtherFrequency"        => Ok(Frequency::OtherFrequency),
+            _                       => Err(ParseFrequencyError)
+        }
+    }
+}
+
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+/// Date units.
+pub enum DateUnit {
+    D,          // Calendar day
+    B,          // Business day
+    W,          // Week
+    M,          // Month
+    Y           // Year
+}
+
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+pub enum Tenor {
+    ON,
+    TN,
+    SN,
+    _1W,
+    _2W,
+    _3W,
+    _4W,
+    _1M,
+    _2M,
+
+}
+
 
 
 /// Day count calculation from a start and an end date.
 /// !!! Add a calendar object
-pub fn day_count_fraction (start_date: NaiveDate , end_date: NaiveDate,
-                           daycount: DayCount) -> f64 {
+// pub fn day_count_fraction (start_date: NaiveDate , end_date: NaiveDate,
+//                            daycount: DayCount) -> f64 {
 
 
-    return 3.00;
-}
+//     return 3.00;
+// }
 
 
 
@@ -175,8 +226,5 @@ mod tests {
         adj:      DayAdjust
 
     }
-
-
-
 }
 

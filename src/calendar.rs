@@ -10,9 +10,38 @@ use chrono::NaiveDate;
 /// 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Calendar {
-    pub weekend:  Vec<Weekday>,         // Which weekdays are not good working days
-    pub holidays: Vec<NaiveDate>        // Which days of the year are not good working days
+    pub weekend:   Vec<Weekday>,          // Which weekdays are not good working days
+    pub holidays:  Vec<NaiveDate>,        // Which days of the year are not good working days
+    pub propagate: Option<NaiveDate>      // Use the given holidays dates to propagate until the given date
 }
+
+/// Creating a basic calendar with Saturdays and Sundays as weekend.
+pub fn basic_calendar() -> Calendar {
+    let res: Calendar = Calendar { weekend: vec![ Weekday::Sat
+                                                , Weekday::Sun ]
+                                 , holidays: vec![]
+                                 , propagate: None };
+    return res;
+}
+
+/// Given a calendar, propagate the current Holiday list until the given target date.
+/// The function will simply take the Day and month of each holiday in the current list
+/// and replace the year for every year until the target date.
+/// Useful if only a list of holidays for the current year is available.
+/// If the target date is before the earliest holiday date, it back propagate the calendar.
+pub fn holiday_propagate (cal: Calendar, anchor_date: NaiveDate, target_date: NaiveDate) -> Calendar {
+
+    return basic_calendar();
+}
+
+/// Calendar Union
+pub fn calendar_union (cal1: Calendar, cal2: Calendar) -> Calendar {
+    //let cal1
+    return basic_calendar();
+}
+
+
+
 
 /// Check if a date is a good business day in a given calendar.
 pub fn is_business_day (date: NaiveDate, calendar: &Calendar) -> bool {
@@ -47,6 +76,9 @@ mod tests {
             }
         }
     }
+
+    // Constructing a Basic UK calendar
+
     
     
     #[test]
