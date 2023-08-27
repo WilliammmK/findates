@@ -36,20 +36,15 @@ pub fn basic_calendar() -> Calendar {
 
 impl Calendar {
     /// Add Holidays to a calendar
-    pub fn add_holidays (mut self, holidays: Vec<NaiveDate>) {       
-        self.holidays.extend(holidays.iter());
-        let unique_holidays: Vec<NaiveDate> = self.holidays.into_iter().unique().collect();
-        self.holidays = unique_holidays;
+    pub fn add_holidays (mut self, holidays: &HashSet<NaiveDate>) {       
+        self.holidays.union(holidays);
 
     }
     
     /// Calendar Union
-    pub fn calendar_union (self, calendar: Calendar) {
-        let other_holidays: Vec<NaiveDate> = calendar.holidays;
-        self.add_holidays(other_holidays);
-        // !!! Implement for Weekends as well.
-       let other_weekends: Vec<Weekday> = calendar.weekend;
-       self.weekend.extend(iter)
+    pub fn calendar_union (self, calendar: &Calendar) {
+        self.holidays.union(&calendar.holidays);
+        self.weekend.union(&calendar.weekend);
 
     }
     
