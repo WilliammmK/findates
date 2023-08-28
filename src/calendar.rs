@@ -35,16 +35,30 @@ pub fn basic_calendar() -> Calendar {
 }
 
 impl Calendar {
-    /// Add Holidays to a calendar
-    pub fn add_holidays (mut self, holidays: &HashSet<NaiveDate>) {       
-        self.holidays.union(holidays);
+    /// Construct a new empty calendar
+    pub fn new() -> Self {
+        Self { weekend: HashSet::new(), holidays: HashSet::new() }
+    }
 
+    pub fn get_holidays(self) -> HashSet<NaiveDate> {
+        return self.holidays;
+    }
+
+    /// Add Holidays to the calendar
+    pub fn add_holidays (&mut self, holidays: &HashSet<NaiveDate>) {       
+        self.holidays = self.holidays.union(holidays).cloned().collect();
+
+    }
+
+    /// Add Weekends to the calendar
+    pub fn add_weekends (&mut self, weekends: &HashSet<Weekday>) {
+        self.weekend = self.weekend.union(weekends).cloned().collect();
     }
     
     /// Calendar Union
-    pub fn calendar_union (self, calendar: &Calendar) {
-        self.holidays.union(&calendar.holidays);
-        self.weekend.union(&calendar.weekend);
+    pub fn calendar_union (&mut self, calendar: &Calendar) {
+        self.holidays = self.holidays.union(&calendar.holidays).cloned().collect();
+        self.weekend = self.weekend.union(&calendar.weekend).cloned().collect();
 
     }
     
@@ -55,7 +69,7 @@ impl Calendar {
     /// and replace the year for every year until the target date.
     /// Useful if only a list of holidays for the current year is available.
     /// If the target date is before the earliest holiday date, it back propagate the calendar.
-    pub fn holiday_propagate (mut self, target_date: NaiveDate) {
+    pub fn holiday_propagate (&mut self, target_date: NaiveDate) {
         // If no holidays in the calendar just return the calendar itself.
         if self.holidays.is_empty() { return }
         
@@ -87,7 +101,7 @@ impl Calendar {
 
         
         
-        self.holidays = [].to_vec();        
+        self.holidays = HashSet::new();        
 
 
     return;
@@ -117,36 +131,62 @@ pub fn is_business_day (date: NaiveDate, calendar: &Calendar) -> bool {
 /// Tests
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use chrono::{Weekday, NaiveDate};
-    use crate::calendar;
+    use crate::calendar::{self as c, Calendar};
     
     struct Setup {
-        basic_calendar: calendar::Calendar,
+        empty_calendar: c::Calendar,
+        basic_calendar: c::Calendar,
 
     }
 
     impl Setup {
     // A simple calendar with only Saturdays and Sundays as non-business days.
         fn  new() -> Self {
-            Self { basic_calendar : calendar::Calendar { weekend: vec![ Weekday::Sat
-                                                                      , Weekday::Sun ]
-                                                       , holidays: vec![] }
+
+            Self {  empty_calendar: c::Calendar::new() ,
+                    basic_calendar : c::basic_calendar()
             }
         }
     }
 
     // Constructing a Basic UK calendar
 
+    // add_holidays function test
+    #[test]
+    fn add_holidays_test() {
+        let mut cal: c::Calendar = c::basic_calendar();
+        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
+        let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
+        cal.add_holidays(&new_holidays);
 
-    
-    
+        println!("{:?}",cal.holidays);
+        assert_eq!(cal.holidays, new_holidays);
+    }
+
+    // add_weekends function test
+    #[test]
+    fn add_weekends_test() {
+        let mut cal: c::Calendar = c::Calendar::new();
+        let new_weekend: HashSet<Weekday> = vec![Weekday::Mon].into_iter().collect();
+        cal.add_weekends(&new_weekend);
+        println!("{:?}", cal.weekend);
+        assert_eq!(cal.weekend, new_weekend);
+
+    }
+
+
+    // Is business day function test.
     #[test]
     fn is_business_day_test() {
         let basic_cal = Setup::new().basic_calendar;
         let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Sun);
-        assert_eq!(false, calendar::is_business_day(my_date.unwrap(), &basic_cal));
+        assert_eq!(false, c::is_business_day(my_date.unwrap(), &basic_cal));
         let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Mon);
-        assert_eq!(true, calendar::is_business_day(my_date.unwrap(), &basic_cal));
+        assert_eq!(true, c::is_business_day(my_date.unwrap(), &basic_cal));
         
     }
 
