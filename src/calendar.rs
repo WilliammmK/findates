@@ -3,16 +3,16 @@
 //! but any other day there might be no settlement or trading.
 
 use std::collections::HashSet;
-use std::hash::Hasher;
-use std::hash::Hash;
-use std::iter::Map;
+// use std::hash::Hasher;
+// use std::hash::Hash;
+// use std::iter::Map;
 
 
 use chrono::Datelike;
 use chrono::Weekday;
 use chrono::NaiveDate;
 
-use itertools::Itertools;
+// use itertools::Itertools;
 
 /// A Calendar representation.
 /// Essentially a list of dates that are not
@@ -56,7 +56,7 @@ impl Calendar {
     }
     
     /// Calendar Union
-    pub fn calendar_union (&mut self, calendar: &Calendar) {
+    pub fn union (&mut self, calendar: &Calendar) {
         self.holidays = self.holidays.union(&calendar.holidays).cloned().collect();
         self.weekend = self.weekend.union(&calendar.weekend).cloned().collect();
 
@@ -115,19 +115,6 @@ impl Calendar {
 
 
 
-/// Check if a date is a good business day in a given calendar.
-pub fn is_business_day (date: NaiveDate, calendar: &Calendar) -> bool {
-    if calendar.weekend.contains(&date.weekday()) {
-        return false;
-    } else if calendar.holidays.contains(&date) {
-        return false;
-    } else {
-        return true;    
-    }
-}
-
-
-
 /// Tests
 #[cfg(test)]
 mod tests {
@@ -175,20 +162,32 @@ mod tests {
         cal.add_weekends(&new_weekend);
         println!("{:?}", cal.weekend);
         assert_eq!(cal.weekend, new_weekend);
-
     }
 
-
-    // Is business day function test.
+    // Calendar union function test
     #[test]
-    fn is_business_day_test() {
-        let basic_cal = Setup::new().basic_calendar;
-        let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Sun);
-        assert_eq!(false, c::is_business_day(my_date.unwrap(), &basic_cal));
-        let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Mon);
-        assert_eq!(true, c::is_business_day(my_date.unwrap(), &basic_cal));
-        
+    fn calendar_union_test() {
+        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
+        let mut cal1: Calendar = c::Calendar {weekend: vec![Weekday::Sat].into_iter().collect()
+                                        , holidays: [christmas_day].into_iter().collect()};
+        let cal2: Calendar = c::Calendar {weekend: vec![Weekday::Sun].into_iter().collect()
+                                        , holidays: [boxing_day].into_iter().collect()};
+
+        let mut cal: c::Calendar = c::basic_calendar();
+        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
+        let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
+        cal.add_holidays(&new_holidays);
+
+
+        cal1.union(&cal2);
+        println!("{:?}", cal1);
+        assert_eq!(cal1, cal);
     }
+
+
+
 
 
     

@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use findates::calendar::Calendar;
 use chrono::Weekday;
 use chrono::NaiveDate;
-use findates::calendar::is_business_day;
+
 use findates::calendar as c;
 
 
@@ -14,7 +14,6 @@ fn main() {
     let basic_cal: Calendar = c::basic_calendar();
 
     let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Sun);
-    dbg!("{}", is_business_day(my_date.unwrap(), &basic_cal));    
 
     let mut cal: c::Calendar = c::basic_calendar();
     let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
