@@ -34,6 +34,16 @@ pub fn basic_calendar() -> Calendar {
     return res;
 }
 
+/// Union between a list of calendars
+pub fn calendar_unions (calendars: &Vec<Calendar>) -> Calendar {
+    let mut result_cal = Calendar::new();
+    calendars.iter().for_each(|cal| {
+        result_cal.union(cal)
+    });
+
+    return result_cal;
+}
+
 impl Calendar {
     /// Construct a new empty calendar
     pub fn new() -> Self {
@@ -61,7 +71,13 @@ impl Calendar {
         self.weekend = self.weekend.union(&calendar.weekend).cloned().collect();
 
     }
-    
+
+    /// Calendar Intersection
+    pub fn intersection (&mut self, calendar: &Calendar) {
+        self.holidays = self.holidays.intersection(&calendar.holidays).cloned().collect();
+        self.weekend = self.weekend.intersection(&calendar.weekend).cloned().collect();
+
+    }
 
 
     /// Given a calendar, propagate the current Holiday list until the given target date.
@@ -121,6 +137,7 @@ mod tests {
     use std::collections::HashSet;
 
     use chrono::{Weekday, NaiveDate};
+    use itertools::Itertools;
     use crate::calendar::{self as c, Calendar};
     
     struct Setup {
@@ -175,13 +192,32 @@ mod tests {
                                         , holidays: [boxing_day].into_iter().collect()};
 
         let mut cal: c::Calendar = c::basic_calendar();
-        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
-        let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
         let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
         cal.add_holidays(&new_holidays);
 
 
         cal1.union(&cal2);
+        println!("{:?}", cal1);
+        assert_eq!(cal1, cal);
+    }
+
+    // Calendar intersection function test
+    #[test]
+    fn calendar_intersection_test() {
+        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
+        let mut cal1: Calendar = c::Calendar {weekend: vec![Weekday::Sun].into_iter().collect()
+                                        , holidays: [christmas_day].into_iter().collect()};
+        let cal2: Calendar = c::Calendar {weekend: vec![Weekday::Sun].into_iter().collect()
+                                        , holidays: [christmas_day,boxing_day].into_iter().collect()};
+
+        let mut cal: c::Calendar = Calendar::new();
+        let new_holidays: HashSet<NaiveDate> =  [christmas_day].into_iter().collect();
+        cal.add_weekends(&[Weekday::Sun].into_iter().collect());
+        cal.add_holidays(&new_holidays);
+
+
+        cal1.intersection(&cal2);
         println!("{:?}", cal1);
         assert_eq!(cal1, cal);
     }
