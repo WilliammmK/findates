@@ -105,8 +105,6 @@ impl Calendar {
             if min_year > target_year {
                 let years: std::ops::Range<i32> = target_year .. min_year;
                 
-
-
             } 
             // Propagate
             else if min_year == target_year{

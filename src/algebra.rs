@@ -1,9 +1,14 @@
-use chrono::{NaiveDate, Datelike};
+use std::ops::Add;
+
+
+use chrono::{NaiveDate, Datelike, Days};
 
 use crate::calendar::Calendar;
 use crate::calendar as c;
+use crate::conventions as conv;
 
 
+pub struct Date(NaiveDate);
 
 
 
@@ -16,6 +21,41 @@ pub fn is_business_day (date: &NaiveDate, calendar: &Calendar) -> bool {
     } else {
         return true;    
     }
+}
+
+impl Date {
+
+}
+/// Adjust a date to a business day according to a Calendar and a AdjustRule
+pub fn adjust (date: &NaiveDate, calendar: &Calendar, adjust_rule: Option<conv::AdjustRule>) -> NaiveDate {
+    match adjust_rule {
+        None                                => return *date,
+        Some(conv::AdjustRule::Unadjusted)  => return *date,
+        Some(conv::AdjustRule::Following)   => {
+            if is_business_day(date, calendar) {
+                return *date;
+            } else {
+                let mut adj_date: NaiveDate = date.checked_add_days(Days::new(1)).unwrap(); // add_days function does not modify the original date
+                loop {
+                    if is_business_day(&adj_date, calendar) {
+                        break;
+                    } else {
+                        adj_date = date.checked_add_days(Days::new(1)).unwrap();
+                    }
+                }
+                return adj_date;
+            }
+        },
+
+        Some(conv::AdjustRule::ModFollowing)  => return *date, // !!! Stub
+        Some(conv::AdjustRule::Preceding)  => return *date, // !!! Stub
+        Some(conv::AdjustRule::ModPreceding)  => return *date, // !!! Stub
+        Some(conv::AdjustRule::HalfMonthModFollowing)  => return *date, // !!! Stub
+        Some(conv::AdjustRule::Nearest)  => return *date, // !!! Stub
+
+    } 
+
+
 }
 
 

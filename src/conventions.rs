@@ -59,7 +59,7 @@ impl FromStr for DayCount {
 /// Business day adjustment conventions enumerations.
 /// Descriptions directly copied from quantlib docs: https://www.quantlib.org/reference/group__datetime.html 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
-pub enum  DayAdjust{
+pub enum  AdjustRule{
     Following,                  // Choose the first business day after the given holiday. 
     ModFollowing,               // Choose the first business day after the given holiday unless it belongs to a different month, in which case choose the first business day before the holiday. 
     Preceding,                  // Choose the first business day before the given holiday.
@@ -70,40 +70,40 @@ pub enum  DayAdjust{
 }
 
 
-// Display trait implementation for the DayAdjust enum.
+// Display trait implementation for the AdjustRule enum.
 // Keep it consistent with the actual variant.
-impl fmt::Display for DayAdjust {
+impl fmt::Display for AdjustRule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            DayAdjust::Following             => write!(f, "Following"),
-            DayAdjust::ModFollowing          => write!(f, "ModFollowing"),
-            DayAdjust::Preceding             => write!(f, "Preceding"),
-            DayAdjust::ModPreceding          => write!(f, "ModPreceding"),
-            DayAdjust::Unadjusted            => write!(f, "Unadjusted"),
-            DayAdjust::HalfMonthModFollowing => write!(f, "HalfMonthModFollowing"),
-            DayAdjust::Nearest               => write!(f, "Nearest"),
+            AdjustRule::Following             => write!(f, "Following"),
+            AdjustRule::ModFollowing          => write!(f, "ModFollowing"),
+            AdjustRule::Preceding             => write!(f, "Preceding"),
+            AdjustRule::ModPreceding          => write!(f, "ModPreceding"),
+            AdjustRule::Unadjusted            => write!(f, "Unadjusted"),
+            AdjustRule::HalfMonthModFollowing => write!(f, "HalfMonthModFollowing"),
+            AdjustRule::Nearest               => write!(f, "Nearest"),
         }
     }
 }
 
 
-// Parsing error specific to DayAdjust
+// Parsing error specific to AdjustRule
 #[derive(Debug, PartialEq, Eq)]
-pub struct ParseDayAdjustError;
+pub struct ParseAdjustRuleError;
 
-// FromStr trait implementation for DayAdjust
-impl FromStr for DayAdjust {
-    type Err = ParseDayAdjustError;
+// FromStr trait implementation for AdjustRule
+impl FromStr for AdjustRule {
+    type Err = ParseAdjustRuleError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Following"                 => Ok(DayAdjust::Following),
-            "ModFollowing"              => Ok(DayAdjust::ModFollowing),
-            "Preceding"                 => Ok(DayAdjust::Preceding),
-            "ModPreceding"              => Ok(DayAdjust::ModPreceding),
-            "Unadjusted"                => Ok(DayAdjust::Unadjusted),
-            "HalfMonthModFollowing"     => Ok(DayAdjust::HalfMonthModFollowing),
-            "Nearest"                   => Ok(DayAdjust::Nearest),
-            _                           => Err(ParseDayAdjustError)
+            "Following"                 => Ok(AdjustRule::Following),
+            "ModFollowing"              => Ok(AdjustRule::ModFollowing),
+            "Preceding"                 => Ok(AdjustRule::Preceding),
+            "ModPreceding"              => Ok(AdjustRule::ModPreceding),
+            "Unadjusted"                => Ok(AdjustRule::Unadjusted),
+            "HalfMonthModFollowing"     => Ok(AdjustRule::HalfMonthModFollowing),
+            "Nearest"                   => Ok(AdjustRule::Nearest),
+            _                           => Err(ParseAdjustRuleError)
         }
     }
 }
@@ -150,11 +150,11 @@ impl fmt::Display for Frequency {
     }
 }
 
-// Parsing error specific to DayAdjust
+// Parsing error specific to AdjustRule
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseFrequencyError;
 
-// FromStr trait implementation for DayAdjust
+// FromStr trait implementation for AdjustRule
 impl FromStr for Frequency {
     type Err = ParseFrequencyError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -223,7 +223,7 @@ mod tests {
 
     struct Setup {
         daycount: DayCount,
-        adj:      DayAdjust
+        adj:      AdjustRule
 
     }
 }

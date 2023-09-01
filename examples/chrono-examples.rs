@@ -19,7 +19,13 @@ fn main() {
     // Adding days to a date
     let my_days: Days = Days::new(10);
     let moved_date: Option<NaiveDate> = my_first_date.unwrap().checked_add_days(my_days);
+    //my_first_date.unwrap().checked_sub_days(my_days);
+    //let my_first_date: Option<NaiveDate> = my_first_date.unwrap().checked_add_days(my_days);
+    println!("moved_date Variable: ");
     println!("{}", moved_date.unwrap());
+    println!("original date Variable: ");
+    println!("{}", my_first_date.unwrap());
+
     // Successive Date
     println!("{}",date_from_string.unwrap().succ_opt().unwrap());
 
@@ -33,6 +39,8 @@ fn main() {
     println!("{}",month_of_date);
     let year_of_date: i32 = date_from_string.unwrap().year();
     println!("{}",year_of_date);
+
+
 
 
 }
