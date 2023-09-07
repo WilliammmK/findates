@@ -202,8 +202,8 @@ mod tests {
     // Calendar intersection function test
     #[test]
     fn calendar_intersection_test() {
-        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
-        let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
+        let christmas_day: NaiveDate = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+        let boxing_day: NaiveDate = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
         let mut cal1: Calendar = c::Calendar {weekend: vec![Weekday::Sun].into_iter().collect()
                                         , holidays: [christmas_day].into_iter().collect()};
         let cal2: Calendar = c::Calendar {weekend: vec![Weekday::Sun].into_iter().collect()

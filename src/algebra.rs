@@ -126,21 +126,74 @@ fn sub_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
 /// Tests
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use chrono::NaiveDate;
     use chrono::Weekday;
     use crate::calendar as c;
     use crate::algebra as a;
+    use crate::conventions::AdjustRule;
+    
+    
 
     // Is business day function test.
     #[test]
     fn is_business_day_test() {
-        let basic_cal = c::basic_calendar();
+        let mut basic_cal: c::Calendar = c::basic_calendar();
         let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Sun);
         assert_eq!(false, a::is_business_day(&my_date.unwrap(), &basic_cal));
         let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Mon);
         assert_eq!(true, a::is_business_day(&my_date.unwrap(), &basic_cal));
-        
+        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+        assert_eq!(true, a::is_business_day(&christmas_day, &basic_cal));
+        basic_cal.add_holidays(&[christmas_day].into_iter().collect());
+        assert_eq!(false, a::is_business_day(&christmas_day, &basic_cal));
+
     }
+
+    // Setup for variables to be used in multiples tests
+    struct setup {
+        cal: c::Calendar,
+        test_weekend: NaiveDate,
+        test_holiday: NaiveDate
+    }
+    // Setup constructor
+    impl setup {
+        fn  new() -> Self {
+            let mut basic_cal: c::Calendar = c::basic_calendar();
+            let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+            let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
+            let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
+            let test_weekend: NaiveDate = NaiveDate::from_ymd_opt(2023, 9,2).unwrap();
+            basic_cal.add_holidays(&new_holidays);
+            Self { 
+                    cal : basic_cal,
+                    test_holiday: christmas_day,
+                    test_weekend: test_weekend
+            }
+        }
+    }
+
+
+
+    #[test]
+    fn adjust_following_test() {
+        // !!! implement = 
+        let mut setup: setup = setup::new();
+        let mut cal: c::Calendar = setup.cal; 
+        //println!("Right after this:");
+        //println!("{:?}", cal);      
+        //println!("... and over");
+        assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
+        assert_ne!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 26).unwrap());
+
+
+
+
+
+
+    }
+
 
 
 }
