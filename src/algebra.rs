@@ -1,4 +1,5 @@
 use std::ops::Add;
+use std::ops::Sub;
 
 
 use chrono::{NaiveDate, Datelike, Days};
@@ -27,35 +28,98 @@ impl Date {
 
 }
 /// Adjust a date to a business day according to a Calendar and a AdjustRule
+/// This function returns a new NaiveDate without modifying the input.
 pub fn adjust (date: &NaiveDate, calendar: &Calendar, adjust_rule: Option<conv::AdjustRule>) -> NaiveDate {
-    match adjust_rule {
-        None                                => return *date,
-        Some(conv::AdjustRule::Unadjusted)  => return *date,
-        Some(conv::AdjustRule::Following)   => {
-            if is_business_day(date, calendar) {
-                return *date;
-            } else {
-                let mut adj_date: NaiveDate = date.checked_add_days(Days::new(1)).unwrap(); // add_days function does not modify the original date
-                loop {
-                    if is_business_day(&adj_date, calendar) {
-                        break;
-                    } else {
-                        adj_date = date.checked_add_days(Days::new(1)).unwrap();
-                    }
+    // If it is a good day, just return it.
+    if is_business_day(date, calendar) {
+        return date.clone();
+    } else {
+        let adj_date: NaiveDate;
+        match adjust_rule {
+            None                                => return date.clone(),
+
+            Some(conv::AdjustRule::Unadjusted)  => return date.clone(),
+
+            Some(conv::AdjustRule::Following)   => {
+                return add_adjust(date, calendar);
+            },
+    
+            Some(conv::AdjustRule::ModFollowing)  => {
+                adj_date = add_adjust(date, calendar);
+                if adj_date.month() != date.month() {
+                    return sub_adjust(date, calendar);
+                } else {
+                    return adj_date;
                 }
-                return adj_date;
+            },
+    
+            Some(conv::AdjustRule::Preceding)  => {
+                return sub_adjust(date, calendar);
             }
-        },
+            
+            Some(conv::AdjustRule::ModPreceding)  => {
+                adj_date = sub_adjust(date, calendar);
+                if adj_date.month() != date.month() {
+                    return add_adjust(date, calendar);
+                } else {
+                    return adj_date;
+                }
+            }
 
-        Some(conv::AdjustRule::ModFollowing)  => return *date, // !!! Stub
-        Some(conv::AdjustRule::Preceding)  => return *date, // !!! Stub
-        Some(conv::AdjustRule::ModPreceding)  => return *date, // !!! Stub
-        Some(conv::AdjustRule::HalfMonthModFollowing)  => return *date, // !!! Stub
-        Some(conv::AdjustRule::Nearest)  => return *date, // !!! Stub
+            Some(conv::AdjustRule::HalfMonthModFollowing)  => {
+                adj_date = add_adjust(date, calendar);
+                if adj_date.month() != date.month() {
+                    return sub_adjust(date, calendar);
+                } else if date.day() <= 15 && adj_date.day() > 15  {
+                    return sub_adjust(date, calendar);
+                } else {
+                    return adj_date;
+                }
+            }
 
-    } 
+            Some(conv::AdjustRule::Nearest)  => {
+                let follow_date: NaiveDate = add_adjust(date, calendar);
+                let prec_date: NaiveDate   = sub_adjust(date, calendar);
+                if (follow_date - *date) <= (prec_date - *date) {
+                    return follow_date;
+                } else {
+                    return prec_date;
+                }
+            }
+        } 
+    }
 
 
+}
+
+// Auxiliary function to adjust, not to be exported
+fn add_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
+    let mut t = 1;
+    let mut adj_date: NaiveDate = date.checked_add_days(Days::new(t)).unwrap(); // add_days function does not modify the original date
+    loop {
+        if is_business_day(&adj_date, calendar) {
+            break;
+        } else {
+            t += 1;
+            adj_date = date.checked_add_days(Days::new(t)).unwrap();
+        }
+    }
+    return adj_date;
+}
+
+// Auxiliary function to adjust, not to be exported
+fn sub_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
+    let mut t = 1;
+    let mut adj_date: NaiveDate = date.checked_sub_days(Days::new(t)).unwrap(); // add_days function does not modify the original date
+    loop {
+        if is_business_day(&adj_date, calendar) {
+            break;
+        } else {
+            t += 1;
+            adj_date = date.checked_sub_days(Days::new(t)).unwrap();
+        }
+    }
+    return adj_date;
 }
 
 
