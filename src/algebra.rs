@@ -127,8 +127,11 @@ fn sub_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use std::str::FromStr;
+    use chrono::Datelike;
     use chrono::NaiveDate;
     use chrono::Weekday;
+    use chrono::Days;
     use crate::calendar as c;
     use crate::algebra as a;
     use crate::conventions::AdjustRule;
@@ -163,7 +166,7 @@ mod tests {
             let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
             let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
             let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
-            let test_weekend: NaiveDate = NaiveDate::from_ymd_opt(2023, 9,2).unwrap();
+            let test_weekend: NaiveDate = NaiveDate::from_ymd_opt(2023, 9,2).unwrap(); // this is a Saturday
             basic_cal.add_holidays(&new_holidays);
             Self { 
                     cal : basic_cal,
@@ -178,21 +181,35 @@ mod tests {
     #[test]
     fn adjust_following_test() {
         // !!! implement = 
-        let mut setup: setup = setup::new();
-        let mut cal: c::Calendar = setup.cal; 
-        //println!("Right after this:");
-        //println!("{:?}", cal);      
-        //println!("... and over");
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal; 
         assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
         assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
         assert_ne!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 26).unwrap());
-
-
-
-
-
-
     }
+
+    #[test]
+    fn adjust_preceding_test() {
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal; 
+        let sunday = setup.test_weekend.checked_add_days(Days::new(1)).unwrap();
+        assert_eq!(sunday.weekday(), Weekday::Sun);
+        assert_eq!(a::adjust(&sunday, &cal, Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 9,1).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday.checked_add_days(Days::new(1)).unwrap(), &cal, Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 12, 22).unwrap());
+        assert_ne!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 12, 25).unwrap());
+    }
+
+    #[test]
+    fn adjust_modfollowing_test() {
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal; 
+        let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
+        let eoy: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 30).unwrap();
+        assert_eq!(a::adjust(&eom, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9,29).unwrap());
+        assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9, 4).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
+    }
+
 
 
 
