@@ -221,6 +221,20 @@ mod tests {
         assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 2, 1).unwrap(), &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 2,2).unwrap());
     }
 
+    #[test]
+    fn adjust_halfmonthmodfollowing_test() {
+        let setup: setup = setup::new();
+        let mut cal: c::Calendar = setup.cal; 
+        cal.add_holidays(&[NaiveDate::from_ymd_opt(2023, 4, 14).unwrap()].into_iter().collect());
+        let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
+        let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // This is a Saturday
+        //let boy: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
+        assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
+        //assert_eq!(a::adjust(&mom, &cal, Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 9,1).unwrap());
+        //assert_eq!(a::adjust(&boy, &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 1,2).unwrap());
+        //assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 2, 1).unwrap(), &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 2,2).unwrap());
+    }
+
 
 
 }
