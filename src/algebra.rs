@@ -204,12 +204,20 @@ mod tests {
         let setup: setup = setup::new();
         let cal: c::Calendar = setup.cal; 
         let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
-        let eoy: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 30).unwrap();
         assert_eq!(a::adjust(&eom, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9,29).unwrap());
         assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9, 4).unwrap());
         assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
     }
 
+    #[test]
+    fn adjust_modpreceding_test() {
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal; 
+        let bom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 1).unwrap();
+        assert_eq!(a::adjust(&bom, &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 9,1).unwrap());
+        //assert_eq!(a::adjust(&setup.test_holiday.checked_add_days(Days::new(1)).unwrap(), &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 12, 22).unwrap());
+        //assert_ne!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 12, 25).unwrap());
+    }
 
 
 
