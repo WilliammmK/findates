@@ -389,9 +389,12 @@ mod tests {
         }
 
     println!("{:?}", test_schedule);
+    let setup: setup = setup::new();
+    let mut cal: c::Calendar = setup.cal;
     let start_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,1).unwrap();
-    let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,31).unwrap();
-    //let res = bus_day_schedule(start_date, end_date, calendar, adjust_rule)
+    let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,30).unwrap();
+    let res = bus_day_schedule(&start_date, &end_date, &cal, Some(AdjustRule::Following));
+    println!("{:?}", res);
 
 
     }
