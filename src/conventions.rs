@@ -205,14 +205,7 @@ pub enum Tenor {
 
 
 
-/// Day count calculation from a start and an end date.
-/// !!! Add a calendar object
-// pub fn day_count_fraction (start_date: NaiveDate , end_date: NaiveDate,
-//                            daycount: DayCount) -> f64 {
 
-
-//     return 3.00;
-// }
 
 
 
