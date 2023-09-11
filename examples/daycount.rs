@@ -8,7 +8,7 @@ fn main() {
     println!("{}",my_daycount1);
 
     let my_daycount2: conventions::DayCount;
-    my_daycount2 = conventions::DayCount::D30360;
+    my_daycount2 = conventions::DayCount::D30360Euro;
     println!("{}",my_daycount2);
 
 }

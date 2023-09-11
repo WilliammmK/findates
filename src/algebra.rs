@@ -144,7 +144,7 @@ pub fn bus_day_schedule ( start_date: &NaiveDate, end_date: &NaiveDate
     let mut previous_bus_day: NaiveDate = new_start;
         
     
-    while previous_bus_day <= new_end {
+    while previous_bus_day < new_end {
         // Counter for Days to be added
         let mut t = 1;     
         // Need the loop for when the AdjustRule land at a prior date such as Preceding
@@ -171,7 +171,14 @@ pub fn bus_day_schedule ( start_date: &NaiveDate, end_date: &NaiveDate
 
 
 /// Business Day counter
-/// !!! Needs the Schedule generator
+/// This includes the start date but excludes the end date – as 
+/// it is common for financial calculations.
+/// This uses the bus_day_schedule function to generate a schedule first, so input dates will be adjusted.
+pub fn business_days_between (start_date: &NaiveDate, end_date: &NaiveDate, calendar: &Calendar, adjust_rule: Option<AdjustRule>) -> u64 {
+    let schedule: Vec<NaiveDate> = bus_day_schedule(start_date, end_date, calendar, adjust_rule);
+    // Since the schedule generated includes the end date we subtract one.
+    return schedule.len() as u64 - 1;
+}
 
 /// Day count fraction calculation from a start and an end date.
 /// If no Calendar is passed, there will be no adjustment to the dates.
@@ -183,13 +190,25 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
                            calendar: Option<&Calendar>, adjust_rule: Option<AdjustRule>) -> f64 {
     // !!! Stub only
     let delta: i64;
+    let start_adjusted: NaiveDate;
+    let end_adjusted: NaiveDate;
     if calendar == None {
+        start_adjusted = *start_date;
+        end_adjusted   = *end_date;
         delta = (*end_date - *start_date).num_days().abs();
+
     } else {
-        let start_adjust: NaiveDate = adjust(start_date, calendar.unwrap(), adjust_rule);
-        let end_adjust: NaiveDate   = adjust(end_date, calendar.unwrap(), adjust_rule);
-        delta = (start_adjust - end_adjust).num_days().abs();
+        start_adjusted = adjust(start_date, calendar.unwrap(), adjust_rule);
+        end_adjusted  = adjust(end_date, calendar.unwrap(), adjust_rule);
+        delta = (start_adjusted - end_adjusted).num_days().abs();
     }
+    // Auxiliary for calculations
+    let start_year: i32 = start_adjusted.year();
+    let start_month: u32 = start_adjusted.month();
+    let mut start_day: u32 = start_adjusted.day();
+    let end_year: i32 = end_adjusted.year();
+    let end_month: u32 = end_adjusted.month();
+    let mut end_day: u32 = end_adjusted.day();
     
     match daycount {
         DayCount::Act360 => {
@@ -200,16 +219,39 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
             return delta as f64/365.0; 
          }
 
-         DayCount::ActAct => {
-            return 3.0; // !!! stub
+         DayCount::ActActISDA => {     
+            if start_adjusted == end_adjusted {
+                return 0.0;
+            } else if start_year == end_year && is_leap_year(start_year) {
+                return delta as f64/366.0;
+            } else if start_year == end_year && !is_leap_year(start_year) {
+                return delta as f64/365.0;
+            } else if start_adjusted < end_adjusted {
+                return day_count_fraction(&end_adjusted, &start_adjusted, daycount, calendar, adjust_rule);
+            } 
+            else {
+                let mut dcf: f64 = end_year as f64 - start_year as f64 - 1.0;
+                let base1: i32 = if is_leap_year(start_year) { 366 } else { 365 };
+                let base2: i32 = if is_leap_year(start_year) { 366 } else { 365 };
+                let dcf1: i64 = (NaiveDate::from_ymd_opt(start_year + 1, 1,1).unwrap() - start_adjusted).num_days() / base1 as i64;
+                let dcf2: i64 = (end_adjusted - NaiveDate::from_ymd_opt(end_year, 1,1).unwrap()).num_days() / base2 as i64;               
+                dcf = dcf + dcf1 as f64 + dcf2 as f64;
+                return  dcf;
+            }
          }
 
-         DayCount::D30360 => {
-            return 3.0; // !!! stub
+         DayCount::D30360Euro => {   
+            // Adjust if day i the 31st
+            if start_day == 31 { start_day = 30; }
+            else if end_day == 31 { end_day = 30; }
+            
+            let res = 360 * (end_year - start_year) + (30 * (end_month - start_month) as i32) + (end_day - start_day) as i32;
+            return res as f64 / 360.0;
          }
 
          DayCount::D30365 => {
-            return 3.0; // !!! stub
+            let res = 360 * (end_year - start_year) + (30 * (end_month - start_month) as i32) + (end_day - start_day) as i32;
+            return res as f64 / 365.0;
          }
 
          DayCount::Bd252 => {
@@ -222,8 +264,21 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
 }
 
 
+// Auxiliary function to check if date is the last day of
+// a February month.
+fn is_last_of_february (date: &NaiveDate) -> bool {
+    // If a valid 29th of Feb Naive date is created, then it is a leap year.
+    if date.month() == 2 && date.day() == 29 { return true; }
+    else { return false; }
+}
 
-
+// Auxiliary function to check if a year in i32 
+// format is a leap year.
+fn is_leap_year (year: i32) -> bool {
+    let date: Option<NaiveDate> = NaiveDate::from_ymd_opt(year, 2, 29);
+    // If the date is Some, it's a valid leap year; otherwise, it's not.
+    date.is_some()
+}
 
 
 
@@ -235,7 +290,9 @@ mod tests {
     use chrono::NaiveDate;
     use chrono::Weekday;
     use chrono::Days;
+    use itertools::Itertools;
     use crate::algebra::bus_day_schedule;
+    use crate::algebra::business_days_between;
     use crate::calendar as c;
     use crate::algebra as a;
     use crate::conventions::{AdjustRule, Frequency, DayCount, DateUnit} ;
@@ -376,27 +433,55 @@ mod tests {
     #[test]
     fn schedule_test() {
         let mut test_schedule: Vec<NaiveDate> = [].to_vec();
+        let hol = NaiveDate::from_ymd_opt(2023,9 , 22).unwrap();
         // Create test vector with all the dates
-        for i in 1 .. 31 {
+        for i in 2 .. 31 {
             let dt = NaiveDate::from_ymd_opt(2023,9,i).unwrap();
             // Exclude weekends
             if dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun {} 
             // Include a Holiday
-            else if dt == NaiveDate::from_ymd_opt(2023,9 , 22).unwrap() {}
+            else if dt == hol {}
             else {
                 test_schedule.push(dt)
             }            
         }
+    let setup: setup = setup::new();
+    let mut cal: c::Calendar = setup.cal;
+    cal.add_holidays(&[hol].into_iter().collect());
+    let start_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,2).unwrap();
+    let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,30).unwrap();
+    let res: Vec<NaiveDate> = bus_day_schedule(&start_date, &end_date, &cal, Some(AdjustRule::ModFollowing));
+    assert_eq!(test_schedule, res);
+    }
 
+    // Business Day count test
+    #[test]
+    fn bus_days_between_test() {
+        let mut test_schedule: Vec<NaiveDate> = [].to_vec();
+        let hol: NaiveDate = NaiveDate::from_ymd_opt(2023,9 , 22).unwrap();
+        // Create test vector with all the dates
+        for i in 1 .. 29 {
+            let dt = NaiveDate::from_ymd_opt(2023,9,i).unwrap();
+            // Exclude weekends
+            if dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun {} 
+            // Include a Holiday
+            else if dt == hol {}
+            else {
+                test_schedule.push(dt)
+            }            
+        }
     println!("{:?}", test_schedule);
     let setup: setup = setup::new();
     let mut cal: c::Calendar = setup.cal;
+    cal.add_holidays(&[hol].into_iter().collect());
     let start_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,1).unwrap();
-    let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,30).unwrap();
-    let res = bus_day_schedule(&start_date, &end_date, &cal, Some(AdjustRule::Following));
-    println!("{:?}", res);
+    let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,29).unwrap();
+    let res_sch: Vec<NaiveDate> = bus_day_schedule(&start_date, &end_date, &cal, Some(AdjustRule::Preceding));
+    let res: u64 = business_days_between(&start_date, &end_date, &cal, Some(AdjustRule::Preceding));
+    println!("{:?}", res_sch);
 
-
+    assert_eq!(test_schedule.len() as u64, res);
+    
     }
 
     // Day count Fraction tests

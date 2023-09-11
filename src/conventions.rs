@@ -14,8 +14,8 @@ pub enum DayCount {
     Act360,
     Act365,
     Bd252,
-    ActAct,
-    D30360,
+    ActActISDA,
+    D30360Euro, // ISDA convention: starting or ending dates on the 31st of the month become equal to 30; starting dates or ending dates that occur on the last day of February also become equal to 30, except for the termination date. 
     D30365    
 }
 
@@ -27,8 +27,8 @@ impl fmt::Display for DayCount {
             DayCount::Act360 => write!(f, "Act360"),
             DayCount::Act365 => write!(f, "Act365"),
             DayCount::Bd252  => write!(f, "Bd252"),
-            DayCount::ActAct => write!(f, "ActAct"),
-            DayCount::D30360 => write!(f, "D30360"),
+            DayCount::ActActISDA => write!(f, "ActActISDA"),
+            DayCount::D30360Euro => write!(f, "D30360Euro"),
             DayCount::D30365 => write!(f, "D30365"),
 
         }
@@ -44,13 +44,13 @@ impl FromStr for DayCount {
     type Err = ParseDayCountError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Act360" => Ok(DayCount::Act360),
-            "Act365" => Ok(DayCount::Act365),
-            "Bd2532" => Ok(DayCount::Bd252),
-            "ActAct" => Ok(DayCount::ActAct),
-            "D30360" => Ok(DayCount::D30360),
-            "D30365" => Ok(DayCount::D30365),
-            _        => Err(ParseDayCountError)
+            "Act360"     => Ok(DayCount::Act360),
+            "Act365"     => Ok(DayCount::Act365),
+            "Bd2532"     => Ok(DayCount::Bd252),
+            "ActActIsda" => Ok(DayCount::ActActISDA),
+            "D30360Euro" => Ok(DayCount::D30360Euro),
+            "D30365"     => Ok(DayCount::D30365),
+            _            => Err(ParseDayCountError)
         }
     }
 }
