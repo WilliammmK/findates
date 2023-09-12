@@ -188,21 +188,24 @@ pub fn business_days_between (start_date: &NaiveDate, end_date: &NaiveDate, cale
 /// absolute time difference.
 pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycount: DayCount, 
                            calendar: Option<&Calendar>, adjust_rule: Option<AdjustRule>) -> f64 {
-    // !!! Stub only
     let delta: i64;
     let start_adjusted: NaiveDate;
     let end_adjusted: NaiveDate;
+    let some_adjust_rule: Option<AdjustRule>;
     if calendar == None {
         start_adjusted = *start_date;
         end_adjusted   = *end_date;
+        some_adjust_rule = adjust_rule;
         delta = (*end_date - *start_date).num_days().abs();
 
     } else {
-        start_adjusted = adjust(start_date, calendar.unwrap(), adjust_rule);
-        end_adjusted  = adjust(end_date, calendar.unwrap(), adjust_rule);
+        // Default Adjust rule to following
+        some_adjust_rule = if adjust_rule == None { Some(AdjustRule::Following) } else { adjust_rule };
+        start_adjusted = adjust(start_date, calendar.unwrap(), some_adjust_rule);
+        end_adjusted  = adjust(end_date, calendar.unwrap(), some_adjust_rule);
         delta = (start_adjusted - end_adjusted).num_days().abs();
     }
-    // Auxiliary for calculations
+    // Auxiliary variables
     let start_year: i32 = start_adjusted.year();
     let start_month: u32 = start_adjusted.month();
     let mut start_day: u32 = start_adjusted.day();
@@ -219,16 +222,17 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
             return delta as f64/365.0; 
          }
 
-         DayCount::ActActISDA => {     
-            if start_adjusted == end_adjusted {
-                return 0.0;
-            } else if start_year == end_year && is_leap_year(start_year) {
-                return delta as f64/366.0;
-            } else if start_year == end_year && !is_leap_year(start_year) {
-                return delta as f64/365.0;
-            } else if start_adjusted < end_adjusted {
-                return day_count_fraction(&end_adjusted, &start_adjusted, daycount, calendar, adjust_rule);
-            } 
+        DayCount::ActActISDA => {     
+            if start_adjusted == end_adjusted { return 0.0; } 
+            // If dates on the same leap year
+            else if start_year == end_year && is_leap_year(start_year) { return delta as f64/366.0; }
+            // If dates on the same 365 year
+            else if start_year == end_year && !is_leap_year(start_year) { return delta as f64/365.0; }
+            // If input start date is after end date
+            else if start_adjusted < end_adjusted {
+                return day_count_fraction(&end_adjusted, &start_adjusted, DayCount::ActActISDA, calendar, some_adjust_rule);
+            }
+            // Start date and end date in different years, that need to be checked if leap year or not.
             else {
                 let mut dcf: f64 = end_year as f64 - start_year as f64 - 1.0;
                 let base1: i32 = if is_leap_year(start_year) { 366 } else { 365 };
@@ -240,7 +244,7 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
             }
          }
 
-         DayCount::D30360Euro => {   
+        DayCount::D30360Euro => {   
             // Adjust if day i the 31st
             if start_day == 31 { start_day = 30; }
             else if end_day == 31 { end_day = 30; }
@@ -255,7 +259,13 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
          }
 
          DayCount::Bd252 => {
-            return 3.0; // !!! stub
+            // BD252 requires a calendar
+            if calendar == None {
+                // Review if panic is being done correctly
+                panic!("Bd252 Day count requires a Calendar input!")
+            } else {
+                return business_days_between(&start_adjusted, &end_adjusted, calendar.unwrap(), some_adjust_rule) as f64/ 252.0;                
+            }            
          }
         
     }
@@ -497,13 +507,65 @@ mod tests {
         // No calendar
         assert_eq!(round_decimals(res), round_decimals(expected) );    
         // With Calendar
-        let start = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap(); // Adjusted to 02 Oct
-        let end = NaiveDate::from_ymd_opt(2023, 12, 24).unwrap(); // Adjusted to 27 Dec
-        let expected = 0.2388889;
-        let res = day_count_fraction(&start, &end
+        let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap(); // Adjusted to 02 Oct
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 24).unwrap(); // Adjusted to 27 Dec
+        let expected: f64 = 0.2388889;
+        let res: f64 = day_count_fraction(&start, &end
                                         , DayCount::Act360, Some(&cal), Some(AdjustRule::Following));
         assert_eq!(round_decimals(res), round_decimals(expected));
     }
+
+    #[test]
+    fn dcf_act365_test() {
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal;
+        let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
+        let expected: f64 = 0.62191781;
+        let res: f64 = day_count_fraction(&start, &end
+                                        , DayCount::Act365, None, None);
+        // No calendar
+        assert_eq!(round_decimals(res), round_decimals(expected) );    
+        // With Calendar
+        let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap(); // Adjusted to 02 Oct
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 24).unwrap(); // Adjusted to 27 Dec
+        let expected: f64 = 0.23561644;
+        let res: f64 = day_count_fraction(&start, &end
+                                        , DayCount::Act365, Some(&cal), Some(AdjustRule::Following));
+        assert_eq!(round_decimals(res), round_decimals(expected));
+    }
+
+    #[test]
+    fn dcf_actactISDA_test () {
+        // The relevant test cases for this convention are when either or
+        // both start date and end dates fall within a leap year.
+
+        // Both dates within a leap year
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal;
+        let start: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap();
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 5, 27).unwrap(); // This is a Monday within a Leap year
+        let expected: f64 = 0.27868852;
+        let res: f64 = day_count_fraction(&start, &end
+            , DayCount::ActActISDA, Some(&cal), None);
+        assert_eq!( round_decimals(res), round_decimals(expected) );
+
+        // Both dates within a non-leap year
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal;
+        let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 5, 27).unwrap(); // This will get adjusted to 29May2023
+        let expected: f64 = 0.28219178;
+        let res: f64 = day_count_fraction(&start, &end
+            , DayCount::ActActISDA, Some(&cal), None);
+        assert_eq!( round_decimals(res), round_decimals(expected) );
+
+        // End date only within a leap year
+
+
+    }
+
+
 
 
 }
