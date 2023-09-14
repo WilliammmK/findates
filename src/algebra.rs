@@ -626,13 +626,32 @@ mod tests {
         let setup: setup = setup::new();
         let cal: c::Calendar = setup.cal;
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
-        let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); // This is a Monday within a Leap year
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); 
         let expected: f64 = 1.09126984;
         let res: f64 = day_count_fraction(&start, &end
             , DayCount::Bd252, Some(&cal), None);
-        assert_eq!( round_decimals(res), round_decimals(expected) )
+        assert_eq!( round_decimals(res), round_decimals(expected) );
+        // Test case with an adjustment on the end date
+        // let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
+        // let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 23).unwrap(); //
+        // let expected: f64 = 1.09126984;
+        // let res: f64 = day_count_fraction(&start, &end
+        //     , DayCount::Bd252, Some(&cal), None);
+        // assert_eq!( round_decimals(res), round_decimals(expected) )
 
 
+    }
+
+    #[test]
+    #[should_panic]
+    fn dcf_bd252_panic_test() {
+        // A panic should occur since Bd252 is passed without a calendar
+        let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); 
+        let res: f64 = day_count_fraction(&start, &end
+            , DayCount::Bd252, None, None);
+
+    
     }
 
 
