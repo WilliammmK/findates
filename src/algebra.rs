@@ -93,13 +93,17 @@ pub fn adjust (date: &NaiveDate, calendar: &Calendar, adjust_rule: Option<Adjust
 // Auxiliary function to adjust, not to be exported
 fn add_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
     let mut t = 1;
-    let mut adj_date: NaiveDate = date.checked_add_days(Days::new(t)).unwrap(); // add_days function does not modify the original date
+    let mut adj_date: NaiveDate = date.checked_add_days(Days::new(t)).unwrap_or_else(|| {
+        panic!("Date is out of bounds, check chrono internals for the last date available");
+    }); // add_days function does not modify the original date
     loop {
         if is_business_day(&adj_date, calendar) {
             break;
         } else {
             t += 1;
-            adj_date = date.checked_add_days(Days::new(t)).unwrap();
+            adj_date = date.checked_add_days(Days::new(t)).unwrap_or_else(|| {
+                panic!("Date is out of bounds, check chrono internals for the last date available");
+            });
         }
     }
     return adj_date;
@@ -108,13 +112,17 @@ fn add_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
 // Auxiliary function to adjust, not to be exported
 fn sub_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
     let mut t = 1;
-    let mut adj_date: NaiveDate = date.checked_sub_days(Days::new(t)).unwrap(); // add_days function does not modify the original date
+    let mut adj_date: NaiveDate = date.checked_sub_days(Days::new(t)).unwrap_or_else(|| {
+        panic!("Date is out of bounds, check chrono internals for the first date available");
+    }); // add_days function does not modify the original date
     loop {
         if is_business_day(&adj_date, calendar) {
             break;
         } else {
             t += 1;
-            adj_date = date.checked_sub_days(Days::new(t)).unwrap();
+            adj_date = date.checked_sub_days(Days::new(t)).unwrap_or_else(|| {
+                panic!("Date is out of bounds, check chrono internals for the first date available");
+            });
         }
     }
     return adj_date;
@@ -246,12 +254,8 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
 
         DayCount::D30360Euro => {   
             // Adjust if day i the 31st
-            println!("start day is: {}", start_day);
-            println!("end day is: {}", end_day);
             if start_day == 31 { start_day = 30; } else {};
             if end_day == 31 { end_day = 30; } else {};
-            println!("start day is: {}", start_day);
-            println!("end day is: {}", end_day);
             
             let res = 360 * (end_year - start_year) + (30 * (end_month - start_month)) + (end_day - start_day);
             return res as f64 / 360.0;
@@ -632,14 +636,23 @@ mod tests {
             , DayCount::Bd252, Some(&cal), None);
         assert_eq!( round_decimals(res), round_decimals(expected) );
         // Test case with an adjustment on the end date
-        // let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
-        // let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 23).unwrap(); //
-        // let expected: f64 = 1.09126984;
-        // let res: f64 = day_count_fraction(&start, &end
-        //     , DayCount::Bd252, Some(&cal), None);
-        // assert_eq!( round_decimals(res), round_decimals(expected) )
-
-
+        let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
+        let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 23).unwrap(); // This will get adjusted to the 27th of Dec
+        let end2: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 27).unwrap(); // This is a business day so won't be adjusted        
+        let res: f64 = day_count_fraction(&start, &end
+            , DayCount::Bd252, Some(&cal), None);
+        let res2: f64 = day_count_fraction(&start, &end2
+                , DayCount::Bd252, Some(&cal), None);
+        // Business day count for both end dates above should be the same
+        assert_eq!( round_decimals(res), round_decimals(res2) );
+        // But if we pass a Preceding adjustment they should differ
+        let res: f64 = day_count_fraction(&start, &end
+            , DayCount::Bd252, Some(&cal), Some(AdjustRule::Preceding));
+        let res2: f64 = day_count_fraction(&start, &end2
+                , DayCount::Bd252, Some(&cal), Some(AdjustRule::Preceding));
+        assert_ne!( round_decimals(res), round_decimals(res2) );
+        let expected: f64 = 0.94444444;
+        assert_eq!(round_decimals(res), round_decimals(expected));
     }
 
     #[test]
@@ -649,9 +662,7 @@ mod tests {
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); 
         let res: f64 = day_count_fraction(&start, &end
-            , DayCount::Bd252, None, None);
-
-    
+            , DayCount::Bd252, None, None); 
     }
 
 
