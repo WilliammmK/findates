@@ -113,7 +113,6 @@ impl FromStr for AdjustRule {
 /// Descriptions directly copied from quantlib docs: https://www.quantlib.org/reference/group__datetime.html 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 pub enum Frequency {
-    NoFrequency, // null frequency
     Once, // only once, e.g. a zero coupon
     Annual, // once a year
     Semiannual, // twice a year
@@ -133,7 +132,6 @@ pub enum Frequency {
 impl fmt::Display for Frequency {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            Frequency::NoFrequency              => write!(f, "NoFrequency"),
             Frequency::Once                     => write!(f, "Once"),
             Frequency::Annual                   => write!(f, "Annual"),
             Frequency::Semiannual               => write!(f, "Semiannual"),
@@ -159,7 +157,7 @@ impl FromStr for Frequency {
     type Err = ParseFrequencyError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "NoFrequency"           => Ok(Frequency::NoFrequency),
+
             "Once"                  => Ok(Frequency::Once),
             "Annual"                => Ok(Frequency::Annual),
             "Semiannual"            => Ok(Frequency::Semiannual),
@@ -176,6 +174,8 @@ impl FromStr for Frequency {
         }
     }
 }
+
+
 
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
