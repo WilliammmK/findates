@@ -47,6 +47,32 @@ impl Schedule<'_> {
 }
 
 
+/// The function below will add the specified duration to an
+/// anchor date and adjust it to a working day according to the 
+/// given calendar and adjust rule.
+pub fn force_add_adjust( anchor_date: &NaiveDate, delta: Duration, opt_calendar: Option<&Calendar>
+                       , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
+    let mut res = *anchor_date;
+    res = anchor_date.checked_add_signed(delta).unwrap_or_else(|| {
+        panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
+    });
+    res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
+    // The corner case of a Week's long holiday
+    if res <= *anchor_date {
+        let mut dayi = 1;
+        while res <= *anchor_date {
+            res = anchor_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
+                panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
+            });
+            dayi += 1;
+            res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
+        }
+    }
+    return res; 
+}
+
+                       
+
 
 // Gets the next date given an anchor date and a schedule
 // for a given frequency. The function will not adjust the anchor date,
@@ -63,39 +89,18 @@ pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
             // the function might simply return the same as anchor date after adjustment.
             // The loop below forces that the returned dat
             // Should only be an issue for the Daily Frequency.
-            let mut delta = 1;
-            while res <= *anchor_date {
-                res = anchor_date.checked_add_signed(Duration::days(delta)).unwrap_or_else(|| {
-                    panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Daily);
-                });
-                delta += 1;
-                res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-            }
-            return res;
+            let delta = Duration::days(1);
+            return force_add_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
         },
         
         Frequency::Weekly => {
-            res = anchor_date.checked_add_signed(Duration::weeks(1)).unwrap_or_else(|| {
-                panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
-            });
-            res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-            // The corner case of a Week's long holiday
-            if res <= *anchor_date {
-                let mut delta = 1;
-                while res <= *anchor_date {
-                    res = anchor_date.checked_add_signed(Duration::days(delta)).unwrap_or_else(|| {
-                        panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Daily);
-                    });
-                    delta += 1;
-                    res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-                }
+            let delta = Duration::weeks(1);
+            return force_add_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
             }
-            return res; }
         
         Frequency::Biweekly => {
-            
-            
-            return res;
+            let delta = Duration::weeks(2);
+            return force_add_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
         }
 
         // !!! stubs
