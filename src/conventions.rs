@@ -110,6 +110,7 @@ impl FromStr for AdjustRule {
 
 
 /// Frequency enumeration.
+/// These are all in reference to a 1 year period, i.e
 /// Descriptions directly copied from quantlib docs: https://www.quantlib.org/reference/group__datetime.html 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 pub enum Frequency {

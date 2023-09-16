@@ -27,7 +27,13 @@ pub fn is_business_day (date: &NaiveDate, calendar: &Calendar) -> bool {
 
 /// Adjust a date to a business day according to a Calendar and a AdjustRule
 /// This function returns a new NaiveDate without modifying the input.
-pub fn adjust (date: &NaiveDate, calendar: &Calendar, adjust_rule: Option<AdjustRule>) -> NaiveDate {
+pub fn adjust (date: &NaiveDate, opt_calendar: Option<&Calendar>, adjust_rule: Option<AdjustRule>) -> NaiveDate {
+    
+    // No adjustment given no calendar
+    let calendar: &Calendar;    
+    if opt_calendar == None {return *date;}
+    else { calendar = opt_calendar.unwrap() }
+    
     // If it is a good day, just return it.
     if is_business_day(date, calendar) {
         return date.clone();
@@ -109,6 +115,8 @@ fn add_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
     return adj_date;
 }
 
+
+
 // Auxiliary function to adjust, not to be exported
 fn sub_adjust (date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
     let mut t = 1;
@@ -144,8 +152,8 @@ pub fn bus_day_schedule ( start_date: &NaiveDate, end_date: &NaiveDate
     }
 
     // Adjust the start and end date if needed.    
-    let new_start: NaiveDate = adjust(start_date, calendar, rule);
-    let new_end: NaiveDate = adjust(end_date, calendar, rule);
+    let new_start: NaiveDate = adjust(start_date, Some(calendar), rule);
+    let new_end: NaiveDate = adjust(end_date,  Some(calendar), rule);
     // Initialize the output vector with the adjusted start date.
     let mut schedule: Vec<NaiveDate> = vec![new_start];
     // Auxiliary variable for looping
@@ -156,7 +164,7 @@ pub fn bus_day_schedule ( start_date: &NaiveDate, end_date: &NaiveDate
         // Counter for Days to be added
         let mut t = 1;     
         // Need the loop for when the AdjustRule land at a prior date such as Preceding
-        let mut next_bus_day: NaiveDate = adjust(&previous_bus_day.checked_add_days(Days::new(t)).unwrap(), calendar, rule);
+        let mut next_bus_day: NaiveDate = adjust(&previous_bus_day.checked_add_days(Days::new(t)).unwrap(),  Some(calendar), rule);
         
         // Check if the adjustment didn't land at the same date
         loop {
@@ -164,7 +172,7 @@ pub fn bus_day_schedule ( start_date: &NaiveDate, end_date: &NaiveDate
                 break;
             } else {
                 t += 1;
-                next_bus_day = adjust(&previous_bus_day.checked_add_days(Days::new(t)).unwrap(), calendar, rule);
+                next_bus_day = adjust(&previous_bus_day.checked_add_days(Days::new(t)).unwrap(),  Some(calendar), rule);
             }   
         }
         // Add it to the result vector
@@ -209,8 +217,8 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
     } else {
         // Default Adjust rule to following
         some_adjust_rule = if adjust_rule == None { Some(AdjustRule::Following) } else { adjust_rule };
-        start_adjusted = adjust(start_date, calendar.unwrap(), some_adjust_rule);
-        end_adjusted  = adjust(end_date, calendar.unwrap(), some_adjust_rule);
+        start_adjusted = adjust(start_date,  calendar, some_adjust_rule);
+        end_adjusted  = adjust(end_date, calendar, some_adjust_rule);
         delta = (start_adjusted - end_adjusted).num_days().abs();
     }
     // Auxiliary variables
@@ -366,9 +374,9 @@ mod tests {
     fn adjust_following_test() { 
         let setup: setup = setup::new();
         let cal: c::Calendar = setup.cal; 
-        assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
-        assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
-        assert_ne!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 26).unwrap());
+        assert_eq!(a::adjust(&setup.test_weekend, Some(&cal), Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday, Some(&cal), Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
+        assert_ne!(a::adjust(&setup.test_holiday, Some(&cal), Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 26).unwrap());
     }
 
     #[test]
@@ -377,9 +385,9 @@ mod tests {
         let cal: c::Calendar = setup.cal; 
         let sunday = setup.test_weekend.checked_add_days(Days::new(1)).unwrap();
         assert_eq!(sunday.weekday(), Weekday::Sun);
-        assert_eq!(a::adjust(&sunday, &cal, Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 9,1).unwrap());
-        assert_eq!(a::adjust(&setup.test_holiday.checked_add_days(Days::new(1)).unwrap(), &cal, Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 12, 22).unwrap());
-        assert_ne!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 12, 25).unwrap());
+        assert_eq!(a::adjust(&sunday, Some(&cal), Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 9,1).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday.checked_add_days(Days::new(1)).unwrap(), Some(&cal), Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 12, 22).unwrap());
+        assert_ne!(a::adjust(&setup.test_holiday, Some(&cal), Some(AdjustRule::Preceding)), NaiveDate::from_ymd_opt(2023, 12, 25).unwrap());
     }
 
     #[test]
@@ -387,9 +395,9 @@ mod tests {
         let setup: setup = setup::new();
         let cal: c::Calendar = setup.cal; 
         let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
-        assert_eq!(a::adjust(&eom, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9,29).unwrap());
-        assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9, 4).unwrap());
-        assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
+        assert_eq!(a::adjust(&eom, Some(&cal), Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9,29).unwrap());
+        assert_eq!(a::adjust(&setup.test_weekend, Some(&cal), Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9, 4).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday, Some(&cal), Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
     }
 
     #[test]
@@ -399,9 +407,9 @@ mod tests {
         cal.add_holidays(&[NaiveDate::from_ymd_opt(2023, 2, 1).unwrap()].into_iter().collect());
         let bom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 1).unwrap();
         let boy: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
-        assert_eq!(a::adjust(&bom, &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 9,1).unwrap());
-        assert_eq!(a::adjust(&boy, &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 1,2).unwrap());
-        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 2, 1).unwrap(), &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 2,2).unwrap());
+        assert_eq!(a::adjust(&bom, Some(&cal), Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 9,1).unwrap());
+        assert_eq!(a::adjust(&boy, Some(&cal), Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 1,2).unwrap());
+        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 2, 1).unwrap(), Some(&cal), Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 2,2).unwrap());
     }
 
     #[test]
@@ -412,11 +420,11 @@ mod tests {
         cal.add_holidays(&[new_hol].into_iter().collect());
         let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // This is a Saturday
-        assert_eq!(a::adjust(&setup.test_weekend, &cal, Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
-        assert_eq!(a::adjust(&eom, &cal, Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 9,29).unwrap());
-        assert_eq!(a::adjust(&mom, &cal, Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 1,13).unwrap());
-        assert_eq!(a::adjust(&new_hol, &cal, Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 2,14).unwrap());
-        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 6, 15).unwrap(), &cal, Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 6,15).unwrap());
+        assert_eq!(a::adjust(&setup.test_weekend, Some(&cal), Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
+        assert_eq!(a::adjust(&eom, Some(&cal), Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 9,29).unwrap());
+        assert_eq!(a::adjust(&mom, Some(&cal), Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 1,13).unwrap());
+        assert_eq!(a::adjust(&new_hol, Some(&cal), Some(AdjustRule::HalfMonthModFollowing)), NaiveDate::from_ymd_opt(2023, 2,14).unwrap());
+        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 6, 15).unwrap(), Some(&cal), Some(AdjustRule::ModPreceding)), NaiveDate::from_ymd_opt(2023, 6,15).unwrap());
     }
 
     #[test]
@@ -427,10 +435,10 @@ mod tests {
         cal.add_holidays(&[new_hol].into_iter().collect());
         let bom: NaiveDate = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap();
         let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // This is a Saturday
-        assert_eq!(a::adjust(&bom, &cal, Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 10,2).unwrap());
-        assert_eq!(a::adjust(&mom, &cal, Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 1,13).unwrap());
-        assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 12,27).unwrap());
-        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 12, 24).unwrap(), &cal, Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 12,22).unwrap());
+        assert_eq!(a::adjust(&bom, Some(&cal), Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 10,2).unwrap());
+        assert_eq!(a::adjust(&mom, Some(&cal), Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 1,13).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday, Some(&cal), Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 12,27).unwrap());
+        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 12, 24).unwrap(), Some(&cal), Some(AdjustRule::Nearest)), NaiveDate::from_ymd_opt(2023, 12,22).unwrap());
     }
 
     #[test]
@@ -440,10 +448,10 @@ mod tests {
         let new_hol = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
         cal.add_holidays(&[new_hol].into_iter().collect());
         let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // This is a Saturday
-        assert_eq!(a::adjust(&new_hol, &cal, Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 2,15).unwrap());
-        assert_eq!(a::adjust(&mom, &cal, Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 1,14).unwrap());
-        assert_eq!(a::adjust(&setup.test_holiday, &cal, Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 12,25).unwrap());
-        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 12, 24).unwrap(), &cal, Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 12,24).unwrap());
+        assert_eq!(a::adjust(&new_hol, Some(&cal), Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 2,15).unwrap());
+        assert_eq!(a::adjust(&mom, Some(&cal), Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 1,14).unwrap());
+        assert_eq!(a::adjust(&setup.test_holiday, Some(&cal), Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 12,25).unwrap());
+        assert_eq!(a::adjust(&NaiveDate::from_ymd_opt(2023, 12, 24).unwrap(), Some(&cal), Some(AdjustRule::Unadjusted)), NaiveDate::from_ymd_opt(2023, 12,24).unwrap());
     }
 
     // Business Day schedule test

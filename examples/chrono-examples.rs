@@ -40,6 +40,17 @@ fn main() {
     let year_of_date: i32 = date_from_string.unwrap().year();
     println!("{}",year_of_date);
 
+    // Iterators
+    println!("Days Iterator:");
+    let days_it = date_from_string.unwrap().iter_days();
+    for day in days_it {
+        if day > my_first_date.unwrap() { break;}
+        else {
+            println!("Day is: {}", day);    
+        }
+        
+    }
+
 
 
 
