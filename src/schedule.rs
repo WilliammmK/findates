@@ -103,11 +103,15 @@ pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
             return force_add_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
         }
 
+        Frequency::EveryFourthWeek => {
+            let delta = Duration::weeks(4);
+            return force_add_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
+        }
+
         // !!! stubs
         Frequency::Annual => {return res;}
         Frequency::Bimonthly => {return res;}
-        Frequency::Monthly => {return res;}
-        
+        Frequency::Monthly => {return res;}        
         Frequency::EveryFourthMonth => {return res;}
         Frequency::EveryFourthWeek => {return res;}
         Frequency::Once => {return res;}
@@ -257,7 +261,16 @@ mod tests {
     // Biweekly Frequency test
     #[test]
     fn biweekly_next_test () {
-        
+        let setup: setup = setup::new();
+        let cal: c::Calendar = setup.cal;
+        let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 29).unwrap();
+        // Create a new weekly schedule
+        let sch = Schedule {frequency: Frequency::Biweekly, calendar: Some(&cal), adjust_rule: None};
+        // Test for no adjustment, it should always return a date with the same weekday.
+        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        assert_eq!(anchor.weekday(), res.weekday());
+
+
     }
 
     // Monthly Frequency test
