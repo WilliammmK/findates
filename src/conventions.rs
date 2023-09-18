@@ -125,7 +125,6 @@ pub enum Frequency {
     Biweekly, // every second week
     Weekly, // once a week
     Daily, // once a day
-    OtherFrequency // some other unknown frequency
 }
 
 // Display trait implementation for the Frequency enum.
@@ -144,7 +143,6 @@ impl fmt::Display for Frequency {
             Frequency::Biweekly                 => write!(f, "Biweekly"),
             Frequency::Weekly                   => write!(f, "Weekly"),
             Frequency::Daily                    => write!(f, "Daily"),
-            Frequency::OtherFrequency           => write!(f, "OtherFrequency"),
         }
     }
 }
@@ -170,7 +168,6 @@ impl FromStr for Frequency {
             "Biweekly"              => Ok(Frequency::Biweekly),
             "Weekly"                => Ok(Frequency::Weekly),
             "Daily"                 => Ok(Frequency::Daily),
-            "OtherFrequency"        => Ok(Frequency::OtherFrequency),
             _                       => Err(ParseFrequencyError)
         }
     }

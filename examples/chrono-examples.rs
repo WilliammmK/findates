@@ -2,6 +2,7 @@ use chrono::Datelike;
 // Will use this main function for just initial exploration of chrono
 // and its functionalities.
 use chrono::Days;
+use chrono::Months;
 use chrono::NaiveDate;
 use chrono::ParseError;
 
@@ -50,8 +51,11 @@ fn main() {
         }
         
     }
-
-
+    // Adding a month to a 31st
+    let date_31st: NaiveDate = NaiveDate::from_ymd_opt(2023, 10, 31).unwrap();
+    let one_month = date_31st.checked_add_months(Months::new(1)).unwrap();
+    println!("Date 31st: {}", date_31st); // It does not alter the date
+    println!("Date one month: {}", one_month); // Returns a new Naive Date
 
 
 }
