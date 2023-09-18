@@ -21,27 +21,37 @@ pub struct Schedule<'a> {
 }
 
 
+/// Associated Schedule functions
+impl<'a> Schedule<'a> {
 
-impl Schedule<'_> {
+    /// Create a new Schedule with a Frequency, Calendar and Adjust Rule
+    pub fn new (frequency: Frequency, opt_calendar: Option<&'a Calendar>, opt_adjust_rule: Option<AdjustRule>) -> Self {
 
-    // pub fn generate (&self, anchor_date: NaiveDate, end_date: NaiveDate ) -> Result<Vec<NaiveDate>, &'static str> {
-    //     // Check input dates       
-    //     if end_date <= anchor_date {
-    //         return  Err("Anchor date must be before end date");
-    //     } 
-    //     // If no calendar and no adjustment just sum using the frequency.
-    //     else if self.calendar == None && self.adjust_rule == None {
-            
-    //     }
-    //     else {
-    //         match self.calendar {
-                
-    //         }
+        Self {frequency:frequency, calendar:opt_calendar, adjust_rule: opt_adjust_rule}
 
-    //         return Ok(());
-    //     }
+    }
 
-    // }
+    /// Create an iterator as a method
+    pub fn iter (&self, anchor: NaiveDate) -> ScheduleIterator {
+        ScheduleIterator { schedule: self, anchor: anchor }
+    }
+
+    /// Generate a vector of dates for a given schedule with a start and an end date
+    pub fn generate (&self, anchor_date: NaiveDate, end_date: NaiveDate ) -> Result<Vec<NaiveDate>, &'static str> {
+        // Check input dates       
+        if end_date <= anchor_date {
+            return  Err("Anchor date must be before end date");
+        } 
+        // Use the iterator to collect into a Vec
+        else {
+            let res: Vec<NaiveDate>;
+            let iter = self.iter(anchor_date);
+            res = iter.take_while(|x| x < &end_date).collect();
+
+            return Ok(res);
+
+        }
+    }
 
 
     
@@ -154,19 +164,17 @@ pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
             return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
         },
 
+        Frequency::Semiannual => {
+            let delta = Months::new(6);
+            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+        },
 
-        
-        
-        // !!! stubs
-        Frequency::Annual => {return res;}
-        Frequency::Once => {return res;}
-        Frequency::Semiannual => {return res;}
-        
+        Frequency::Annual => {
+            let delta = Months::new(12);
+            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+        },
 
-
-        
-
-
+        Frequency::Once => {return *anchor_date;}
 
     }
 
@@ -175,10 +183,17 @@ pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
 
 
 /// Iterator over dates of a schedule.
+/// This is an unbounded
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScheduleIterator<'a> {
-    schedule: Schedule<'a>,
+    schedule: &'a Schedule<'a>,
     anchor: NaiveDate
+}
+
+impl<'a> ScheduleIterator<'a> {
+    pub fn new (schedule: &'a Schedule<'a>, anchor: NaiveDate) -> Self {
+        Self {schedule: schedule, anchor: anchor}
+    }
 }
 
 impl<'a> Iterator for ScheduleIterator<'a> {
@@ -191,10 +206,9 @@ impl<'a> Iterator for ScheduleIterator<'a> {
 }
 
 // Next function for the Schedule iterator
-fn schedule_iterator_next<'a> (schedule: &mut Schedule, anchor: NaiveDate) -> Option<NaiveDate> {
+fn schedule_iterator_next<'a> (schedule: & Schedule, anchor: NaiveDate) -> Option<NaiveDate> {
     
-   Some( schedule_next(&anchor, schedule.frequency, schedule.calendar, schedule.adjust_rule))
-    
+   Some( schedule_next(&anchor, schedule.frequency, schedule.calendar, schedule.adjust_rule))    
     
 }
 
@@ -259,7 +273,7 @@ mod tests {
         let sch = Schedule {frequency: Frequency::Daily, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Nearest)};
         let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 10, 2).unwrap() );
-        let iter = ScheduleIterator {schedule: sch, anchor: anchor}.clone(); 
+        // let iter = ScheduleIterator {schedule: sch, anchor: anchor}.clone(); 
         // println!("ITERATING NOW:");
         // for dayit in iter.clone() {
         //     if dayit > NaiveDate::from_ymd_opt(2023, 10, 15).unwrap() { break;}
@@ -278,12 +292,7 @@ mod tests {
 
     }
 
-    // Iterator test
-    #[test]
-    fn daily_iterator_test () {
 
-
-    }
 
     // Weekly Frequency test
     #[test]
@@ -416,6 +425,12 @@ mod tests {
     }
 
 
+    // Schedule Iterator test
+    #[test]
+    fn schedule_iterator_test () {
+
+
+    }
 
 
 
