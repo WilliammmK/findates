@@ -1,13 +1,10 @@
 //! Schedules
 //! The output here can come from both methods or free functions.
 
-use std::ops::Add;
-
-
 use chrono::{NaiveDate, Duration, Months};
 
-use crate::calendar::{Calendar, self};
-use crate::conventions::{AdjustRule,DayCount, DateUnit, Frequency,Tenor};
+use crate::calendar::Calendar;
+use crate::conventions::{AdjustRule,DayCount, DateUnit, Frequency, Tenor};
 use crate::algebra;
 
 
@@ -26,9 +23,7 @@ impl<'a> Schedule<'a> {
 
     /// Create a new Schedule with a Frequency, Calendar and Adjust Rule
     pub fn new (frequency: Frequency, opt_calendar: Option<&'a Calendar>, opt_adjust_rule: Option<AdjustRule>) -> Self {
-
         Self {frequency:frequency, calendar:opt_calendar, adjust_rule: opt_adjust_rule}
-
     }
 
     /// Create an iterator as a method
@@ -47,13 +42,9 @@ impl<'a> Schedule<'a> {
             let res: Vec<NaiveDate>;
             let iter = self.iter(anchor_date);
             res = iter.take_while(|x| x < &end_date).collect();
-
             return Ok(res);
-
         }
     }
-
-
     
 }
 
@@ -63,7 +54,7 @@ impl<'a> Schedule<'a> {
 // given calendar and adjust rule.
 fn force_add_duration_adjust ( anchor_date: &NaiveDate, delta: Duration, opt_calendar: Option<&Calendar>
                        , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
-    let mut res = *anchor_date;
+    let mut res: NaiveDate;
     
     res = anchor_date.checked_add_signed(delta).unwrap_or_else(|| {
         panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
@@ -87,7 +78,7 @@ fn force_add_duration_adjust ( anchor_date: &NaiveDate, delta: Duration, opt_cal
 // so using separate function whenever the unit is a month
 fn force_add_months_adjust ( anchor_date: &NaiveDate, delta: Months, opt_calendar: Option<&Calendar>
                        , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
-    let mut res = *anchor_date;
+    let mut res: NaiveDate;
     
     res = anchor_date.checked_add_months(delta).unwrap_or_else(|| {
         panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
@@ -109,14 +100,12 @@ fn force_add_months_adjust ( anchor_date: &NaiveDate, delta: Months, opt_calenda
                        
 
 
-// Gets the next date given an anchor date and a schedule
-// for a given frequency. The function will not adjust the anchor date,
+// Gets the next date given an anchor date, a schedule and
+// a frequency. The function will not adjust the anchor date,
 // but it will adjust the next date if a calendar and adjust rule is passed.
 pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
                       , opt_calendar: Option<&Calendar>, opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {
     
-    // Return Date
-    let mut res: NaiveDate = *anchor_date;
     // Calculate next for each of the Frequencies.
     match frequency {
         Frequency::Daily => {
@@ -216,23 +205,21 @@ fn schedule_iterator_next<'a> (schedule: & Schedule, anchor: NaiveDate) -> Optio
 /// Unit Tests
 #[cfg(test)]
 mod tests {
-    use std::alloc::System;
     use std::collections::HashSet;
-
-    use chrono::{NaiveDate, Datelike, Duration};
+    use chrono::{NaiveDate, Datelike};
     use crate::calendar as c;
-    use crate::conventions::{Frequency, AdjustRule, DayCount };
+    use crate::conventions::{Frequency, AdjustRule };
     use crate::schedule::ScheduleIterator;
     use super::{Schedule, schedule_next};
 
         // Setup for variables to be used in multiples tests
-        struct setup {
+        struct Setup {
             cal: c::Calendar,
-            test_weekend: NaiveDate,
-            test_holiday: NaiveDate
+            _test_weekend: NaiveDate,
+            _test_holiday: NaiveDate
         }
         // Setup constructor
-        impl setup {
+        impl Setup {
             fn  new() -> Self {
                 let mut basic_cal: c::Calendar = c::basic_calendar();
                 let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
@@ -242,8 +229,8 @@ mod tests {
                 basic_cal.add_holidays(&new_holidays);
                 Self { 
                         cal : basic_cal,
-                        test_holiday: christmas_day,
-                        test_weekend: test_weekend
+                        _test_holiday: christmas_day,
+                        _test_weekend: test_weekend
                 }
             }
         }
@@ -253,7 +240,7 @@ mod tests {
     // Daily Frequency test
     #[test]
     fn daily_next_test () {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 29).unwrap();
         // Create a new schedule
@@ -297,7 +284,7 @@ mod tests {
     // Weekly Frequency test
     #[test]
     fn weekly_next_test () {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 29).unwrap();
         // Create a new weekly schedule
@@ -341,7 +328,7 @@ mod tests {
     // Biweekly Frequency test
     #[test]
     fn biweekly_next_test () {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         // Create a new weekly schedule
@@ -359,7 +346,7 @@ mod tests {
     // EveryFourWeeks Frequency test
     #[test]
     fn fourweeks_next_test () {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         // Create a new weekly schedule
@@ -377,7 +364,7 @@ mod tests {
     // Monthly Frequency test
     #[test]
     fn monthly_next_test () {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         // Create a new weekly schedule
@@ -402,7 +389,7 @@ mod tests {
     // BiMonthly Frequency test
     #[test]
     fn bimonthly_next_test () {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         // Create a new weekly schedule
