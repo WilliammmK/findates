@@ -2,10 +2,8 @@
 //! Initial conventions here are the same as the ones in Quantlib's
 //! Date and time calculations. 
 
-use chrono::naive::NaiveDate;
 use std::fmt;
 use std::str::FromStr;
-use std::string::ParseError;
 
 /// Day count conventions enumeration. This will grow as more conventions are
 /// added into scope.
@@ -210,12 +208,8 @@ pub enum Tenor {
 /// Tests
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
-    struct Setup {
-        daycount: DayCount,
-        adj:      AdjustRule
 
-    }
 }
 

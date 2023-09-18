@@ -1,12 +1,10 @@
-use std::ops::Add;
-use std::ops::Sub;
-
+/// Functions using Schedules, Calendars and the Conventions.
+/// A more functional approach was taken in this module,
+/// with no side effects or altering of internal states.
 
 use chrono::{NaiveDate, Datelike, Days};
-
 use crate::calendar::Calendar;
-use crate::calendar as c;
-use crate::conventions::{DayCount, AdjustRule, Frequency};
+use crate::conventions::{DayCount, AdjustRule};
 
 
 pub struct Date(NaiveDate);
@@ -320,7 +318,7 @@ mod tests {
     use crate::algebra::business_days_between;
     use crate::calendar as c;
     use crate::algebra as a;
-    use crate::conventions::{AdjustRule, Frequency, DayCount, DateUnit} ;
+    use crate::conventions::{AdjustRule, DayCount} ;
 
     use super::day_count_fraction;
     
@@ -495,7 +493,6 @@ mod tests {
                 test_schedule.push(dt)
             }            
         }
-    println!("{:?}", test_schedule);
     let setup: setup = setup::new();
     let mut cal: c::Calendar = setup.cal;
     cal.add_holidays(&[hol].into_iter().collect());
@@ -503,7 +500,6 @@ mod tests {
     let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,29).unwrap();
     let res_sch: Vec<NaiveDate> = bus_day_schedule(&start_date, &end_date, &cal, Some(AdjustRule::Preceding));
     let res: u64 = business_days_between(&start_date, &end_date, &cal, Some(AdjustRule::Preceding));
-    println!("{:?}", res_sch);
 
     assert_eq!(test_schedule.len() as u64, res);
     
