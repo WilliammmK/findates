@@ -7,8 +7,6 @@ use std::collections::HashSet;
 // use std::hash::Hash;
 // use std::iter::Map;
 
-
-use chrono::Datelike;
 use chrono::Weekday;
 use chrono::NaiveDate;
 
@@ -79,49 +77,6 @@ impl Calendar {
 
     }
 
-
-    /// Given a calendar, propagate the current Holiday list until the given target date.
-    /// The function will simply take the Day and month of each holiday in the current list
-    /// and replace the year for every year until the target date.
-    /// Useful if only a list of holidays for the current year is available.
-    /// If the target date is before the earliest holiday date, it back propagate the calendar.
-    pub fn holiday_propagate (&mut self, target_date: NaiveDate) {
-        // If no holidays in the calendar just return the calendar itself.
-        if self.holidays.is_empty() { return }
-        
-        else {
-            let target_year = target_date.year();
-            let hols_years = self.holidays.iter().map(|x: &NaiveDate| {x.year()});
-            let mut days_and_months =self.holidays.iter()
-                                                                    .map(|d: &NaiveDate| {(d.day(),d.month())});
-            let min_year: i32;
-            min_year = hols_years.min().unwrap_or(target_year);
-
-            // New holiday vector
-            let new_holidays: Vec<NaiveDate>;
-            
-            // Ok to just unwrap here as empty list has been already checked in the first if.
-            // Back propagate
-            if min_year > target_year {
-                let years: std::ops::Range<i32> = target_year .. min_year;
-                
-            } 
-            // Propagate
-            else if min_year == target_year{
-    
-            }
-
-        }
-
-        
-        
-        self.holidays = HashSet::new();        
-
-
-    return;
-}
-
-
     
 }
 
@@ -135,24 +90,8 @@ mod tests {
     use std::collections::HashSet;
 
     use chrono::{Weekday, NaiveDate};
-    use itertools::Itertools;
     use crate::calendar::{self as c, Calendar};
     
-    struct Setup {
-        empty_calendar: c::Calendar,
-        basic_calendar: c::Calendar,
-
-    }
-
-    impl Setup {
-    // A simple calendar with only Saturdays and Sundays as non-business days.
-        fn  new() -> Self {
-
-            Self {  empty_calendar: c::Calendar::new() ,
-                    basic_calendar : c::basic_calendar()
-            }
-        }
-    }
 
     // Constructing a Basic UK calendar
 
