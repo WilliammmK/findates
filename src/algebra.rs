@@ -288,14 +288,6 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
 }
 
 
-// Auxiliary function to check if date is the last day of
-// a February month.
-fn is_last_of_february (date: &NaiveDate) -> bool {
-    // If a valid 29th of Feb Naive date is created, then it is a leap year.
-    if date.month() == 2 && date.day() == 29 { return true; }
-    else { return false; }
-}
-
 // Auxiliary function to check if a year in i32 
 // format is a leap year.
 fn is_leap_year (year: i32) -> bool {
@@ -344,13 +336,13 @@ mod tests {
     }
 
     // Setup for variables to be used in multiples tests
-    struct setup {
+    struct Setup {
         cal: c::Calendar,
         test_weekend: NaiveDate,
         test_holiday: NaiveDate
     }
     // Setup constructor
-    impl setup {
+    impl Setup {
         fn  new() -> Self {
             let mut basic_cal: c::Calendar = c::basic_calendar();
             let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
@@ -370,7 +362,7 @@ mod tests {
     // Adjust tests
     #[test]
     fn adjust_following_test() { 
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal; 
         assert_eq!(a::adjust(&setup.test_weekend, Some(&cal), Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 9,4).unwrap());
         assert_eq!(a::adjust(&setup.test_holiday, Some(&cal), Some(AdjustRule::Following)), NaiveDate::from_ymd_opt(2023, 12, 27).unwrap());
@@ -379,7 +371,7 @@ mod tests {
 
     #[test]
     fn adjust_preceding_test() {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal; 
         let sunday = setup.test_weekend.checked_add_days(Days::new(1)).unwrap();
         assert_eq!(sunday.weekday(), Weekday::Sun);
@@ -390,7 +382,7 @@ mod tests {
 
     #[test]
     fn adjust_modfollowing_test() {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal; 
         let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         assert_eq!(a::adjust(&eom, Some(&cal), Some(AdjustRule::ModFollowing)), NaiveDate::from_ymd_opt(2023, 9,29).unwrap());
@@ -400,8 +392,8 @@ mod tests {
 
     #[test]
     fn adjust_modpreceding_test() {
-        let setup: setup = setup::new();
-        let mut cal: c::Calendar = setup.cal; 
+        let setup: Setup = Setup::new();
+        let  mut cal: c::Calendar = setup.cal;  
         cal.add_holidays(&[NaiveDate::from_ymd_opt(2023, 2, 1).unwrap()].into_iter().collect());
         let bom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 1).unwrap();
         let boy: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
@@ -412,8 +404,8 @@ mod tests {
 
     #[test]
     fn adjust_halfmonthmodfollowing_test() {
-        let setup: setup = setup::new();
-        let mut cal: c::Calendar = setup.cal; 
+        let setup: Setup = Setup::new();
+        let  mut cal: c::Calendar = setup.cal;  
         let new_hol = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
         cal.add_holidays(&[new_hol].into_iter().collect());
         let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
@@ -427,8 +419,8 @@ mod tests {
 
     #[test]
     fn adjust_nearest_test() {
-        let setup: setup = setup::new();
-        let mut cal: c::Calendar = setup.cal;
+        let setup: Setup = Setup::new();
+        let  mut cal: c::Calendar = setup.cal;  
         let new_hol = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
         cal.add_holidays(&[new_hol].into_iter().collect());
         let bom: NaiveDate = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap();
@@ -441,8 +433,8 @@ mod tests {
 
     #[test]
     fn adjust_unadjusted_test() {
-        let setup: setup = setup::new();
-        let mut cal: c::Calendar = setup.cal;
+        let setup: Setup = Setup::new();
+        let  mut cal: c::Calendar = setup.cal;  
         let new_hol = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
         cal.add_holidays(&[new_hol].into_iter().collect());
         let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // This is a Saturday
@@ -468,7 +460,7 @@ mod tests {
                 test_schedule.push(dt)
             }            
         }
-    let setup: setup = setup::new();
+    let setup: Setup = Setup::new();
     let mut cal: c::Calendar = setup.cal;
     cal.add_holidays(&[hol].into_iter().collect());
     let start_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,2).unwrap();
@@ -493,12 +485,11 @@ mod tests {
                 test_schedule.push(dt)
             }            
         }
-    let setup: setup = setup::new();
-    let mut cal: c::Calendar = setup.cal;
+    let setup: Setup = Setup::new();
+    let  mut cal: c::Calendar = setup.cal;  
     cal.add_holidays(&[hol].into_iter().collect());
     let start_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,1).unwrap();
     let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023,9,29).unwrap();
-    let res_sch: Vec<NaiveDate> = bus_day_schedule(&start_date, &end_date, &cal, Some(AdjustRule::Preceding));
     let res: u64 = business_days_between(&start_date, &end_date, &cal, Some(AdjustRule::Preceding));
 
     assert_eq!(test_schedule.len() as u64, res);
@@ -508,8 +499,8 @@ mod tests {
     // Day count Fraction tests
     #[test]
     fn dcf_act360_test() {
-        let setup: setup = setup::new();
-        let cal: c::Calendar = setup.cal;
+        let setup: Setup = Setup::new();
+        let cal: c::Calendar = setup.cal;  
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         let expected: f64 = 0.6305556;
@@ -528,8 +519,8 @@ mod tests {
 
     #[test]
     fn dcf_act365_test() {
-        let setup: setup = setup::new();
-        let cal: c::Calendar = setup.cal;
+        let setup: Setup = Setup::new();
+        let  cal: c::Calendar = setup.cal;  
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
         let expected: f64 = 0.62191781;
@@ -552,7 +543,7 @@ mod tests {
         // both start date and end dates fall within a leap year.
 
         // Both dates within a leap year
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let start: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 5, 27).unwrap(); // This is a Monday within a Leap year
@@ -590,7 +581,7 @@ mod tests {
     #[test]
     fn dcf_d30360euro_test () {
         // Start date on the 31st
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,31).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); // This is a Monday within a Leap year
@@ -616,7 +607,7 @@ mod tests {
 
     #[test]
     fn dcf_d30365_test () {
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); // This is a Monday within a Leap year
@@ -631,7 +622,7 @@ mod tests {
         // For a Business Day Calendar, the relevant test cases should
         // of course take into account Holidays and check if the business
         // days are being properly counted.
-        let setup: setup = setup::new();
+        let setup: Setup = Setup::new();
         let cal: c::Calendar = setup.cal;
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); 
@@ -665,7 +656,7 @@ mod tests {
         // A panic should occur since Bd252 is passed without a calendar
         let start: NaiveDate = NaiveDate::from_ymd_opt(2023,1,24).unwrap();
         let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); 
-        let res: f64 = day_count_fraction(&start, &end
+        let _res: f64 = day_count_fraction(&start, &end
             , DayCount::Bd252, None, None); 
     }
 
