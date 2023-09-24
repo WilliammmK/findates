@@ -29,7 +29,7 @@ pub fn adjust (date: &NaiveDate, opt_calendar: Option<&Calendar>, adjust_rule: O
     
     // No adjustment given no calendar
     let calendar: &Calendar;    
-    if opt_calendar == None {return *date;}
+    if opt_calendar == None {return date.clone();}
     else { calendar = opt_calendar.unwrap() }
     
     // If it is a good day, just return it.
@@ -38,7 +38,7 @@ pub fn adjust (date: &NaiveDate, opt_calendar: Option<&Calendar>, adjust_rule: O
     } else {
         let adj_date: NaiveDate;
         match adjust_rule {
-            None                                => return date.clone(),
+            None                          => return date.clone(),
 
             Some(AdjustRule::Unadjusted)  => return date.clone(),
 
@@ -268,7 +268,7 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
          }
 
          DayCount::D30365 => {
-            let res:f64 = 360.0 * (end_year - start_year) as f64 + (30.0 * (end_month - start_month) as f64) + (end_day - start_day) as f64;
+            let res:f64 = 360.0 * (end_year - start_year) as f64 + (30.0 * (end_month - start_month) as f64) + (end_day - start_day) as f64; // Different than Quanlib's implementation.
             return res / 365.0;
          }
 
@@ -298,7 +298,7 @@ fn is_leap_year (year: i32) -> bool {
 
 
 
-/// Tests
+// Tests
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;

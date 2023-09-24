@@ -8,8 +8,7 @@ use crate::conventions::{AdjustRule,DayCount, DateUnit, Frequency, Tenor};
 use crate::algebra;
 
 
-/// A Schedule with an Anchor date
-/// 
+/// A Schedule
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Schedule<'a> {
     pub frequency: Frequency,
@@ -31,17 +30,18 @@ impl<'a> Schedule<'a> {
         ScheduleIterator { schedule: self, anchor: anchor }
     }
 
-    /// Generate a vector of dates for a given schedule with a start and an end date
-    pub fn generate (&self, anchor_date: NaiveDate, end_date: NaiveDate ) -> Result<Vec<NaiveDate>, &'static str> {
+    /// Generate a vector of dates for a given schedule with a start and an end date, including both.
+    pub fn generate (&self, anchor_date: &NaiveDate, end_date: &NaiveDate ) -> Result<Vec<NaiveDate>, &'static str> {
         // Check input dates       
         if end_date <= anchor_date {
             return  Err("Anchor date must be before end date");
         } 
         // Use the iterator to collect into a Vec
         else {
-            let res: Vec<NaiveDate>;
-            let iter = self.iter(anchor_date);
-            res = iter.take_while(|x| x < &end_date).collect();
+            let mut res: Vec<NaiveDate> = vec![];
+            let iter = self.iter(*anchor_date);
+            res.append(&mut iter.take_while(|x| x < &end_date).collect());
+            //res.push(*end_date);
             return Ok(res);
         }
     }

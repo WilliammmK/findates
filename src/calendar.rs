@@ -47,10 +47,16 @@ impl Calendar {
     pub fn new() -> Self {
         Self { weekend: HashSet::new(), holidays: HashSet::new() }
     }
-
+    /// Get the holidays in the Calendar
     pub fn get_holidays(self) -> HashSet<NaiveDate> {
         return self.holidays;
     }
+
+    /// Get the weekend in the Calendar
+    pub fn get_weekend(self) -> HashSet<Weekday> {
+        return self.weekend;
+    }
+
 
     /// Add Holidays to the calendar
     pub fn add_holidays (&mut self, holidays: &HashSet<NaiveDate>) {       
@@ -103,8 +109,6 @@ mod tests {
         let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
         let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
         cal.add_holidays(&new_holidays);
-
-        println!("{:?}",cal.holidays);
         assert_eq!(cal.holidays, new_holidays);
     }
 
@@ -114,8 +118,30 @@ mod tests {
         let mut cal: c::Calendar = c::Calendar::new();
         let new_weekend: HashSet<Weekday> = vec![Weekday::Mon].into_iter().collect();
         cal.add_weekends(&new_weekend);
-        println!("{:?}", cal.weekend);
         assert_eq!(cal.weekend, new_weekend);
+    }
+
+    // get_holidays function test
+    #[test]
+    fn get_holidays_test () {
+        let mut cal: c::Calendar = c::basic_calendar();
+        let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
+        let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
+        cal.add_holidays(&new_holidays);
+        let res = cal.get_holidays();
+        assert_eq!(res, new_holidays);
+    }
+
+    // get_weekend function test
+    #[test]
+    fn get_weekend_test () {
+        let mut cal: c::Calendar = c::Calendar::new();
+        let new_weekend: HashSet<Weekday> = vec![Weekday::Mon].into_iter().collect();
+        cal.add_weekends(&new_weekend);
+        let res = cal.get_weekend();
+        assert_eq!(res, new_weekend);
+
     }
 
     // Calendar union function test
@@ -134,7 +160,6 @@ mod tests {
 
 
         cal1.union(&cal2);
-        println!("{:?}", cal1);
         assert_eq!(cal1, cal);
     }
 
@@ -153,9 +178,7 @@ mod tests {
         cal.add_weekends(&[Weekday::Sun].into_iter().collect());
         cal.add_holidays(&new_holidays);
 
-
         cal1.intersection(&cal2);
-        println!("{:?}", cal1);
         assert_eq!(cal1, cal);
     }
 

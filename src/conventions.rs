@@ -13,7 +13,7 @@ pub enum DayCount {
     Act365,
     Bd252,
     ActActISDA,
-    D30360Euro, // ISDA convention: starting or ending dates on the 31st of the month become equal to 30; starting dates or ending dates that occur on the last day of February also become equal to 30, except for the termination date. 
+    D30360Euro, 
     D30365    
 }
 
@@ -187,9 +187,9 @@ pub enum DateUnit {
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 pub enum Tenor {
-    ON,
-    TN,
-    SN,
+    _ON,
+    _TN,
+    _SN,
     _1W,
     _2W,
     _3W,
