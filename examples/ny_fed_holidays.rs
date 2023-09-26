@@ -66,13 +66,13 @@ let new_year_schedule: Schedule = Schedule::new(Frequency::Annual, None, None);
 let new_year_iterator = new_year_schedule.iter(new_year_day);
 
 // We can now print out the next 5 New year dates:
-println!("List of 5 NY dates: {:?}", new_year_iterator.take(4).collect::<Vec<NaiveDate>>());
+println!("List of NY dates: {:?}", new_year_iterator.take(4).collect::<Vec<NaiveDate>>());
 
 // Great! But we don't need to explicitly create an iterator
 // we just need the NY dates for the next 5 years, so we can just use the
 // generate method.
 let new_years: HashSet<NaiveDate> = new_year_schedule.generate(&new_year_day, 
-                                                    &new_year_day.checked_add_months(Months::new(48)).unwrap())
+                                                    &algebra::checked_add_years(&new_year_day, 10).unwrap())
                                                     .expect("This should work");
 println!("New Year days: {:?}", &new_years);
 
@@ -82,7 +82,7 @@ println!("New Year days: {:?}", &new_years);
 // To achieve that, we can make use of the Nearest Adjustment Rule:
 let new_year_schedule: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
 let real_new_years: HashSet<NaiveDate> = new_year_schedule.generate(&new_year_day, 
-    &new_year_day.checked_add_months(Months::new(49)).unwrap())
+    &algebra::checked_add_years(&new_year_day, 10).unwrap())
     .expect("This should work");
 println!("The actual observed days: {:?}", &real_new_years);
 
@@ -97,20 +97,16 @@ let independence_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 7,4).unwrap();
 let independence_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
 let indep_days = independence_day_sch.generate(
                                                     &independence_day,
-                                                       &independence_day.checked_add_months(Months::new(50)).unwrap()).unwrap();
+                                                    &algebra::checked_add_years(&independence_day, 10).unwrap()).unwrap();
 println!("4th of july dates: {:?}", &indep_days);
 
-let i_day: NaiveDate = NaiveDate::from_ymd_opt(2027, 7,4).unwrap();
-let tes = algebra::adjust(&i_day, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
-println!("************* tes: {:?}", &tes);
-// ny_fed_calendar.add_holidays(&indep_days.into_iter().collect());
 
 // Christmas day now.
 let christmas_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 12,25).unwrap();
 let christmas_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
 let christmas_days = christmas_day_sch.generate(
                                                     &christmas_day,
-                                                       &christmas_day.checked_add_months(Months::new(50)).unwrap()).unwrap();
+                                                    &algebra::checked_add_years(&christmas_day, 10).unwrap()).unwrap();
 println!("Christmas dates: {:?}", &christmas_days);
 // ny_fed_calendar.add_holidays(&christmas_days.into_iter().collect());
 
@@ -121,7 +117,7 @@ let veterans_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 11,11).unwrap();
 let veterans_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
 let veterans_days = veterans_day_sch.generate(
                                                     &veterans_day,
-                                                       &veterans_day.checked_add_months(Months::new(50)).unwrap()).unwrap();
+                                                    &algebra::checked_add_years(&veterans_day, 10).unwrap()).unwrap();
 println!("Veteran days dates: {:?}", &veterans_days);
 
 // And Juneteenth.
@@ -129,13 +125,13 @@ let juneteenth_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 06,19).unwrap();
 let juneteenth_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
 let juneteenth_days = juneteenth_day_sch.generate(
                                                     &juneteenth_day,
-                                                       &juneteenth_day.checked_add_months(Months::new(50)).unwrap()).unwrap();
+                                                    &algebra::checked_add_years(&juneteenth_day, 10).unwrap()).unwrap();
 println!("Juneteenth dates: {:?}", &juneteenth_days);
 
 // Creating the floating holidays for a particular year
 // is made easy using the functionalities from chrono and the use of closures.
 // Let's start
-let years = 2024 ..= 2027;
+let years = 2024 ..= 2033;
 let thanksgiving_days: HashSet<NaiveDate>;
 thanksgiving_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 11, Weekday::Thu, 4).unwrap())
                                      .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
@@ -210,6 +206,62 @@ println!("NY Federal Reserve Holiday Calendar: {:?}", & ny_fed_calendar);
 // And the calculation details can be seem on the two links below:
 // Interest calculation: https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-356/appendix-Appendix%20B%20to%20Part%20356
 // Settlement rules: https://www.ecfr.gov/current/title-31/section-356.30
+
+// From the auction announcement we have the following relevant details:
+// Term and Type of Security 10-Year Note
+// Offering Amount $38,000,000,000
+// Currently Outstanding $0
+// CUSIP Number 91282CHT1
+// Auction Date August 09, 2023
+// Original Issue Date August 15, 2023
+// Issue Date August 15, 2023
+// Maturity Date August 15, 2033
+// Dated Date August 15, 2023
+// Series E-2033
+// Yield Determined at Auction
+// Interest Rate Determined at Auction
+// Interest Payment Dates February 15 and August 15
+
+
+// Ok, let's start creating the dates for our treasury bonds then:
+let issue_date = NaiveDate::from_ymd_opt(2023,8,15).unwrap();
+let maturity_date = NaiveDate::from_ymd_opt(2033, 8, 15).unwrap();
+
+// The interest calculation dates will be February 15 and August 15,
+// So lets create those dates until the maturity of the bond using a schedule.
+let coupon_schedule = Schedule::new(Frequency::Semiannual, None, None);
+let mut coupon_dates = coupon_schedule.generate(&issue_date, &maturity_date);
+let mut coupon_dates_list = coupon_dates.unwrap().into_iter().collect::<Vec<_>>();
+coupon_dates_list.sort();
+// let mut for_print = coupon_dates.clone().unwrap().into_iter().collect::<Vec<_>>();
+// for_print.sort();
+println!("The coupon dates are: {:?}", &coupon_dates_list);
+
+// Great! Those are the unadjusted coupon dates, that we can use to 
+// calculate the day count fraction for the coupons. Treasury notes use a 30/360
+// day count convention, so lets calculate that:
+let mut dcfs: Vec<f64> = vec![  ];
+let mut i: i32;
+// let range = 0 .. coupon_dates_list.len() as i32;
+for i in 0 .. (coupon_dates_list.len() - 1) {
+    let dcf = algebra::day_count_fraction(coupon_dates_list.get(i).unwrap(),
+                                            coupon_dates_list.get(i + 1).unwrap(), DayCount::D30360Euro, None, None);
+    dcfs.push(dcf);
+}
+
+println!("Day count fractions are: {:?}", &dcfs);
+
+// Yes! The Fractions are always 0.5 exactly like the documentation of the bond specifies!
+// With these fractions we can calculate the actual interest amount to be paid, but
+// what about the actual payment dates? We can adjust the coupon dates created above
+// using our newly created calendar so we can check exactly when they're supposed to happen.
+
+let settlement_dates: Vec<NaiveDate> = coupon_dates_list.into_iter()
+                                                        .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Following)))
+                                                        .collect();
+
+println!("The actual settlement dates are: {:?}", &settlement_dates);
+
 
 
 

@@ -287,6 +287,17 @@ pub fn day_count_fraction (start_date: &NaiveDate , end_date: &NaiveDate, daycou
     
 }
 
+// Convenience function to add years since chrono doesn't provide one.
+pub fn checked_add_years(date: &NaiveDate, years_to_add: i32) -> Option<NaiveDate> {
+    let current_year = date.year();
+    let current_month = date.month();
+    let current_day = date.day();
+
+    let new_year = current_year + years_to_add;
+
+    NaiveDate::from_ymd_opt(new_year, current_month, current_day)
+}
+
 
 // Auxiliary function to check if a year in i32 
 // format is a leap year.

@@ -7,7 +7,7 @@ use chrono::{NaiveDate, Duration, Months, Datelike, Days};
 
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, Frequency};
-use crate::algebra::{self, adjust};
+use crate::algebra::{self, adjust, checked_add_years};
 
 
 /// A Schedule
@@ -74,16 +74,7 @@ fn force_adjust ( anchor_date: &NaiveDate, next_date: &NaiveDate, opt_calendar: 
 }
 
 
-// Aux function to add years since chrono doesn't provide one.
-fn checked_add_years(date: &NaiveDate, years_to_add: i32) -> Option<NaiveDate> {
-    let current_year = date.year();
-    let current_month = date.month();
-    let current_day = date.day();
 
-    let new_year = current_year + years_to_add;
-
-    NaiveDate::from_ymd_opt(new_year, current_month, current_day)
-}
                        
 
 
