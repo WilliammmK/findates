@@ -1,11 +1,13 @@
 //! Schedules
 //! The output here can come from both methods or free functions.
 
-use chrono::{NaiveDate, Duration, Months, Datelike};
+use std::collections::HashSet;
+
+use chrono::{NaiveDate, Duration, Months, Datelike, Days};
 
 use crate::calendar::Calendar;
-use crate::conventions::{AdjustRule,DayCount, DateUnit, Frequency, Tenor};
-use crate::algebra;
+use crate::conventions::{AdjustRule, Frequency};
+use crate::algebra::{self, adjust};
 
 
 /// A Schedule
@@ -31,17 +33,18 @@ impl<'a> Schedule<'a> {
     }
 
     /// Generate a vector of dates for a given schedule with a start and an end date, including both.
-    pub fn generate (&self, anchor_date: &NaiveDate, end_date: &NaiveDate ) -> Result<Vec<NaiveDate>, &'static str> {
+    pub fn generate (&self, anchor_date: &NaiveDate, end_date: &NaiveDate ) -> Result<HashSet<NaiveDate>, &'static str> {
         // Check input dates       
         if end_date <= anchor_date {
             return  Err("Anchor date must be before end date");
         } 
         // Use the iterator to collect into a Vec
         else {
-            let mut res: Vec<NaiveDate> = vec![];
+            let res: HashSet<NaiveDate>;
             let iter = self.iter(*anchor_date);
-            res.append(&mut iter.take_while(|x| x < &end_date).collect());
-            //res.push(*end_date);
+            res =  iter.take_while(|x| x < &end_date)
+                                .map(|x| adjust(&x, self.calendar, self.adjust_rule))
+                                .collect();
             return Ok(res);
         }
     }
@@ -49,23 +52,19 @@ impl<'a> Schedule<'a> {
 }
 
 
-// The function below will add the specified duration to an
-// anchor date and adjust it to a working day according to the 
-// given calendar and adjust rule.
-fn force_add_duration_adjust ( anchor_date: &NaiveDate, delta: Duration, opt_calendar: Option<&Calendar>
+// For the case of Preceding, ModFollowing, Nearest, etc it will keep giving 
+// the function might simply return the same as anchor date after adjustment.
+// The loop below forces that the returned date is after the anchor date.
+// Should only be an issue for the Daily Frequency, but it covers all cases.
+fn force_adjust ( anchor_date: &NaiveDate, next_date: &NaiveDate, opt_calendar: Option<&Calendar>
                        , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
-    let mut res: NaiveDate;
-    
-    res = anchor_date.checked_add_signed(delta).unwrap_or_else(|| {
-        panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
-    });
-    res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
+    let mut res: NaiveDate = algebra::adjust(next_date, opt_calendar, opt_adjust_rule);
     // Case where the adjustment brings the date back to the same as the anchor
     if res <= *anchor_date {
         let mut dayi = 1;
         while res <= *anchor_date {
-            res = anchor_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
-                panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
+            res = next_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
+                panic!("Next Adjusted Date is out of bounds, check chrono internals for the last date available");
             });
             dayi += 1;
             res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
@@ -73,56 +72,6 @@ fn force_add_duration_adjust ( anchor_date: &NaiveDate, delta: Duration, opt_cal
     }
     return res; 
 }
-
-// There is no months Duration in chrono for some reason
-// so using separate function whenever the unit is a month
-fn force_add_months_adjust ( anchor_date: &NaiveDate, delta: Months, opt_calendar: Option<&Calendar>
-                       , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
-    let mut res: NaiveDate;
-    
-    res = anchor_date.checked_add_months(delta).unwrap_or_else(|| {
-        panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Monthly);
-    });
-    res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-    // The corner case of a Months's long holiday
-    if res <= *anchor_date {
-        let mut dayi = 1;
-        while res <= *anchor_date {
-            res = anchor_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
-                panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Monthly);
-            });
-            dayi += 1;
-            res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-        }
-    }
-    return res; 
-}
-
-// There is no add years function in chrono as well
-// so defining one here with adjustment.
-fn force_add_years_adjust ( anchor_date: &NaiveDate, delta: i32, opt_calendar: Option<&Calendar>
-                                    , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
-    let mut res: NaiveDate;
-
-    res = checked_add_years(anchor_date, delta).unwrap_or_else(|| {
-    panic!("Next Date for {} frequency is out of bounds or malformed for", Frequency::Annual);
-    });
-    res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-    // The corner case of a Months's long holiday
-    if res <= *anchor_date {
-        let mut dayi = 1;
-        while res <= *anchor_date {
-            res = anchor_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
-            panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Annual);
-        });
-        dayi += 1;
-        res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-        }
-    }
-    return res; 
-}
-
-
 
 
 // Aux function to add years since chrono doesn't provide one.
@@ -133,7 +82,6 @@ fn checked_add_years(date: &NaiveDate, years_to_add: i32) -> Option<NaiveDate> {
 
     let new_year = current_year + years_to_add;
 
-    // Create a new date with the updated year while preserving the current month and day
     NaiveDate::from_ymd_opt(new_year, current_month, current_day)
 }
                        
@@ -142,67 +90,53 @@ fn checked_add_years(date: &NaiveDate, years_to_add: i32) -> Option<NaiveDate> {
 // Gets the next date given an anchor date, a schedule and
 // a frequency. The function will not adjust the anchor date,
 // but it will adjust the next date if a calendar and adjust rule is passed.
-pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
-                      , opt_calendar: Option<&Calendar>, opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {
+pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency) -> Option<NaiveDate> {
     
     // Calculate next for each of the Frequencies.
     match frequency {
         Frequency::Daily => {
-            // For the case of Preceding, ModFollowing, Nearest, etc it will keep giving 
-            // the function might simply return the same as anchor date after adjustment.
-            // The loop below forces that the returned dat
-            // Should only be an issue for the Daily Frequency.
-            let delta = Duration::days(1);
-            return force_add_duration_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
+            return anchor_date.checked_add_days(Days::new(1));
         },
         
         Frequency::Weekly => {
-            let delta = Duration::weeks(1);
-            return force_add_duration_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
+            return anchor_date.checked_add_signed(Duration::weeks(1));
         },
         
         Frequency::Biweekly => {
-            let delta = Duration::weeks(2);
-            return force_add_duration_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
+            return anchor_date.checked_add_signed(Duration::weeks(2));
         },
 
         Frequency::EveryFourthWeek => {
-            let delta = Duration::weeks(4);
-            return force_add_duration_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule)
+            return anchor_date.checked_add_signed(Duration::weeks(4));
         },
 
         Frequency::Monthly => {
             // There is no months Duration, so using Months struct from Chrono
-            let delta = Months::new(1);
-            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+            return anchor_date.checked_add_months(Months::new(1));
         },
 
         Frequency::Bimonthly => {
-            let delta = Months::new(2);
-            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+            return anchor_date.checked_add_months(Months::new(2));
         },
 
         Frequency::Quarterly => {
-            let delta = Months::new(3);
-            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+            return anchor_date.checked_add_months(Months::new(3));
         },
 
         Frequency::EveryFourthMonth => {
-            let delta = Months::new(4);
-            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+            return anchor_date.checked_add_months(Months::new(4));
         },
 
         Frequency::Semiannual => {
-            let delta = Months::new(6);
-            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+            return anchor_date.checked_add_months(Months::new(6));
         },
 
         Frequency::Annual => {
             let delta = 1;
-            return force_add_years_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+            return checked_add_years(anchor_date, delta);
         },
 
-        Frequency::Once => {return *anchor_date;}
+        Frequency::Once => {return Some(*anchor_date);}
 
     }
 
@@ -228,7 +162,7 @@ impl<'a> Iterator for ScheduleIterator<'a> {
     type Item = NaiveDate;
     fn next(&mut self) -> Option<Self::Item> {
         let res = schedule_iterator_next(&mut self.schedule, self.anchor);
-        self.anchor = res.unwrap();
+        self.anchor = res.expect("Next date for this schedule is out of bounds.");
         return res;
     }
 }
@@ -236,9 +170,19 @@ impl<'a> Iterator for ScheduleIterator<'a> {
 // Next function for the Schedule iterator
 fn schedule_iterator_next<'a> (schedule: & Schedule, anchor: NaiveDate) -> Option<NaiveDate> {
     
-   Some( schedule_next(&anchor, schedule.frequency, schedule.calendar, schedule.adjust_rule))    
+   schedule_next(&anchor, schedule.frequency)  
     
 }
+
+pub fn schedule_next_adjusted<'a> (schedule: & Schedule, anchor: NaiveDate) -> NaiveDate {
+    // Call next and then adjust.
+    let next = schedule_next(&anchor, schedule.frequency).expect("Next date for this schedule is out of bounds or malformed");
+    force_adjust(&anchor, &next, schedule.calendar, schedule.adjust_rule)
+         
+}
+    
+
+
 
 
 /// Unit Tests
@@ -248,8 +192,7 @@ mod tests {
     use chrono::{NaiveDate, Datelike};
     use crate::calendar as c;
     use crate::conventions::{Frequency, AdjustRule };
-    use crate::schedule::ScheduleIterator;
-    use super::{Schedule, schedule_next};
+    use super::{Schedule,ScheduleIterator, schedule_next_adjusted};
 
         // Setup for variables to be used in multiples tests
         struct Setup {
@@ -284,37 +227,22 @@ mod tests {
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 29).unwrap();
         // Create a new schedule
         let sch = Schedule {frequency: Frequency::Daily, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModFollowing)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         // Even though this is falls on a next month, Next will force the next date for daily frequencies
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 10, 2).unwrap() );
         // With No Adjustment Rule, it will disregard the calendar and return the next date regardless if it is a good day or not.
         let sch = Schedule {frequency: Frequency::Daily, calendar: Some(&cal), adjust_rule: None};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 9, 30).unwrap() ); // This is a Saturday.
         // Preceding Rule will also force the next day to be output for daily frequencies.
         let sch = Schedule {frequency: Frequency::Daily, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Preceding)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 10, 2).unwrap() );
         // Or even for nearest
         let sch = Schedule {frequency: Frequency::Daily, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Nearest)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 10, 2).unwrap() );
-        // let iter = ScheduleIterator {schedule: sch, anchor: anchor}.clone(); 
-        // println!("ITERATING NOW:");
-        // for dayit in iter.clone() {
-        //     if dayit > NaiveDate::from_ymd_opt(2023, 10, 15).unwrap() { break;}
-        //     else {
-        //         println!("{}", dayit);
-        //     }
-        // }
-        // let new_iter = iter.map(|x| NaiveDate::checked_add_days(x, chrono::Days::new(1)).unwrap());
-        // println!("MAP ITERATING NOW:");
-        // for dayit in new_iter.clone() {
-        //     if dayit > NaiveDate::from_ymd_opt(2023, 10, 15).unwrap() { break;}
-        //     else {
-        //         println!("{}", dayit);
-        //     }
-        // }
+
 
     }
 
@@ -329,36 +257,36 @@ mod tests {
         // Create a new weekly schedule
         let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: None};
         // Test for no adjustment, it should always return a date with the same weekday.
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.weekday(), res.weekday());
         // Even with an Adjustment rule, it is a Friday so weekday should be the same
         let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Preceding)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.weekday(), res.weekday());
         // If the next date falls on a holiday, it will be adjusted according to adjust Rule
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 18).unwrap();
         let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Preceding)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 12, 22).unwrap() ); // This is a Friday
         // Adjusting with Following
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 18).unwrap();
         let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Following)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 12, 27).unwrap() );
         // With no calendar
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 18).unwrap();
         let sch = Schedule {frequency: Frequency::Weekly, calendar: None, adjust_rule: Some(AdjustRule::Following)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 12, 25).unwrap() );
         assert_eq!(anchor.weekday(), res.weekday());
         // A Start date will not be adjusted, but the next date will
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap(); // Boxing day
         let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModFollowing)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2024, 1, 2).unwrap());
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 23).unwrap(); // Saturday
         let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModFollowing)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 12, 29).unwrap() );
 
 
@@ -373,11 +301,11 @@ mod tests {
         // Create a new weekly schedule
         let sch = Schedule {frequency: Frequency::Biweekly, calendar: Some(&cal), adjust_rule: None};
         // Test for no adjustment, it should always return a date with the same weekday.
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.weekday(), res.weekday());
         // With adjustment
         let sch = Schedule {frequency: Frequency::Biweekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Nearest)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_ne!(anchor.weekday(), res.weekday());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 10, 13).unwrap());
     }
@@ -391,11 +319,11 @@ mod tests {
         // Create a new weekly schedule
         let sch = Schedule {frequency: Frequency::EveryFourthWeek, calendar: Some(&cal), adjust_rule: None};
         // Test for no adjustment, it should always return a date with the same weekday.
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.weekday(), res.weekday());
         // With adjustment
         let sch = Schedule {frequency: Frequency::EveryFourthWeek, calendar: Some(&cal), adjust_rule: Some(AdjustRule::Nearest)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_ne!(anchor.weekday(), res.weekday());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 10, 27).unwrap());
     }
@@ -409,18 +337,18 @@ mod tests {
         // Create a new weekly schedule
         let sch = Schedule {frequency: Frequency::Monthly, calendar: Some(&cal), adjust_rule: None};
         // Test for no adjustment, it should always return a date with the same day.
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.day(), res.day());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 10, 30).unwrap());
         // Even with no adjustment, a 31st will return a 30th.
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 10, 31).unwrap();
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_ne!(anchor.day(), res.day());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 11, 30).unwrap());
         // Now with an adjustment
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 18).unwrap();
         let sch = Schedule {frequency: Frequency::Monthly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModPreceding)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_ne!(anchor.day(), res.day());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 3, 17).unwrap());        
     }
@@ -434,18 +362,18 @@ mod tests {
         // Create a new weekly schedule
         let sch = Schedule {frequency: Frequency::Bimonthly, calendar: Some(&cal), adjust_rule: None};
         // Test for no adjustment, it should always return a date with the same day.
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.day(), res.day());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 11, 30).unwrap());
         // No adjustment, a 31st will return a 31st.
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 10, 31).unwrap();
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.day(), res.day());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 12, 31).unwrap());
         // Now with an adjustment
         let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 18).unwrap();
         let sch = Schedule {frequency: Frequency::Bimonthly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModPreceding)};
-        let res = schedule_next(&anchor, sch.frequency, sch.calendar, sch.adjust_rule);
+        let res = schedule_next_adjusted(&sch, anchor);
         assert_eq!(anchor.day(), res.day());
         assert_eq!(res, NaiveDate::from_ymd_opt(2023, 4, 18).unwrap());        
     }

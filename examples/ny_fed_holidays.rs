@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::iter::Successors;
+
 
 /// An example program used to first create a calendar with
 /// the NY Federal reserve holidays and then using that calendar
@@ -17,8 +17,8 @@ use findates::calendar::{Calendar};
 use findates::conventions::*;
 use findates::schedule::{self, Schedule};
 // Chrono imports
-use chrono::{Days,Months,Weekday,NaiveDate, Datelike};
-use itertools::*;
+use chrono::{Months,Weekday,NaiveDate, Datelike};
+
 
 
 
@@ -71,7 +71,7 @@ println!("List of 5 NY dates: {:?}", new_year_iterator.take(4).collect::<Vec<Nai
 // Great! But we don't need to explicitly create an iterator
 // we just need the NY dates for the next 5 years, so we can just use the
 // generate method.
-let new_years: Vec<NaiveDate> = new_year_schedule.generate(&new_year_day, 
+let new_years: HashSet<NaiveDate> = new_year_schedule.generate(&new_year_day, 
                                                     &new_year_day.checked_add_months(Months::new(48)).unwrap())
                                                     .expect("This should work");
 println!("New Year days: {:?}", &new_years);
@@ -81,7 +81,7 @@ println!("New Year days: {:?}", &new_years);
 // fall on a Saturday and on a Monday if they fall on a Sunday.
 // To achieve that, we can make use of the Nearest Adjustment Rule:
 let new_year_schedule: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
-let real_new_years: Vec<NaiveDate> = new_year_schedule.generate(&new_year_day, 
+let real_new_years: HashSet<NaiveDate> = new_year_schedule.generate(&new_year_day, 
     &new_year_day.checked_add_months(Months::new(49)).unwrap())
     .expect("This should work");
 println!("The actual observed days: {:?}", &real_new_years);
@@ -110,7 +110,7 @@ let christmas_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 12,25).unwrap();
 let christmas_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
 let christmas_days = christmas_day_sch.generate(
                                                     &christmas_day,
-                                                       &christmas_day.checked_add_months(Months::new(48)).unwrap()).unwrap();
+                                                       &christmas_day.checked_add_months(Months::new(50)).unwrap()).unwrap();
 println!("Christmas dates: {:?}", &christmas_days);
 // ny_fed_calendar.add_holidays(&christmas_days.into_iter().collect());
 
@@ -136,31 +136,31 @@ println!("Juneteenth dates: {:?}", &juneteenth_days);
 // is made easy using the functionalities from chrono and the use of closures.
 // Let's start
 let years = 2024 ..= 2027;
-let thanksgiving_days: Vec<NaiveDate>;
+let thanksgiving_days: HashSet<NaiveDate>;
 thanksgiving_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 11, Weekday::Thu, 4).unwrap())
                                      .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                      .collect();
 println!("Thanksgiving dates: {:?}", &thanksgiving_days);
 
-let labor_days: Vec<NaiveDate>;
+let labor_days: HashSet<NaiveDate>;
 labor_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 9, Weekday::Mon, 1).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
 println!("Labor Day dates: {:?}", &labor_days);
 
-let columbus_days: Vec<NaiveDate>;
+let columbus_days: HashSet<NaiveDate>;
 columbus_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 10, Weekday::Mon, 2).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
 println!("Columbus Day dates: {:?}", &columbus_days);
 
-let mlkjr_days: Vec<NaiveDate>;
+let mlkjr_days: HashSet<NaiveDate>;
 mlkjr_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 1, Weekday::Mon, 3).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
 println!("MLK Jr Day dates: {:?}", &mlkjr_days);
 
-let washington_days: Vec<NaiveDate>;
+let washington_days: HashSet<NaiveDate>;
 washington_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 2, Weekday::Mon, 3).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
@@ -173,14 +173,14 @@ fn last_monday_of_may (year: i32) -> NaiveDate {
     return may_31st - chrono::Duration::days(delta as i64);
 }
 
-let memorial_days: Vec<NaiveDate>;
+let memorial_days: HashSet<NaiveDate>;
 memorial_days = years.clone().map(|x| last_monday_of_may(x))
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
 println!("Memorial Day dates: {:?}", &memorial_days);
 
 // Now let's add all of those dates to our calendar.
-let mut all_holidays = itertools::concat([real_new_years
+let mut all_holidays:Vec<NaiveDate> = itertools::concat([real_new_years
                                                     ,christmas_days
                                                     ,indep_days
                                                     ,veterans_days
@@ -190,7 +190,7 @@ let mut all_holidays = itertools::concat([real_new_years
                                                     ,columbus_days
                                                     ,mlkjr_days
                                                     ,washington_days
-                                                    ,memorial_days]);
+                                                    ,memorial_days]).into_iter().collect();
 all_holidays.sort();
 println!("Holiday Calendar: {:?}", & all_holidays);
 
@@ -198,6 +198,20 @@ ny_fed_calendar.add_holidays(&all_holidays.into_iter().collect());
 
 // Now let's see how our calendar looks:
 println!("NY Federal Reserve Holiday Calendar: {:?}", & ny_fed_calendar);
+
+// Nice! Matching exactly what's described in the NY Federal Reserve site (note the
+// the asterisks according to the adjustment date.)
+
+// Now lets look at a specific financial product and how dates affect the economics of it.
+// A U.S. Treasury note is a fixed rate debt instrument that pays interest semi-annually:
+// https://www.treasurydirect.gov/marketable-securities/treasury-notes/
+// We can look at the specific issuance auctioned on August 9th 2023:
+// https://www.treasurydirect.gov/instit/annceresult/press/preanre/2023/A_20230802_2.pdf
+// And the calculation details can be seem on the two links below:
+// Interest calculation: https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-356/appendix-Appendix%20B%20to%20Part%20356
+// Settlement rules: https://www.ecfr.gov/current/title-31/section-356.30
+
+
 
 
 
