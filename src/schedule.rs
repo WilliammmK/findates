@@ -1,7 +1,7 @@
 //! Schedules
 //! The output here can come from both methods or free functions.
 
-use chrono::{NaiveDate, Duration, Months};
+use chrono::{NaiveDate, Duration, Months, Datelike};
 
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule,DayCount, DateUnit, Frequency, Tenor};
@@ -81,7 +81,7 @@ fn force_add_months_adjust ( anchor_date: &NaiveDate, delta: Months, opt_calenda
     let mut res: NaiveDate;
     
     res = anchor_date.checked_add_months(delta).unwrap_or_else(|| {
-        panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
+        panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Monthly);
     });
     res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
     // The corner case of a Months's long holiday
@@ -89,13 +89,52 @@ fn force_add_months_adjust ( anchor_date: &NaiveDate, delta: Months, opt_calenda
         let mut dayi = 1;
         while res <= *anchor_date {
             res = anchor_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
-                panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Weekly);
+                panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Monthly);
             });
             dayi += 1;
             res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
         }
     }
     return res; 
+}
+
+// There is no add years function in chrono as well
+// so defining one here with adjustment.
+fn force_add_years_adjust ( anchor_date: &NaiveDate, delta: i32, opt_calendar: Option<&Calendar>
+                                    , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
+    let mut res: NaiveDate;
+
+    res = checked_add_years(anchor_date, delta).unwrap_or_else(|| {
+    panic!("Next Date for {} frequency is out of bounds or malformed for", Frequency::Annual);
+    });
+    res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
+    // The corner case of a Months's long holiday
+    if res <= *anchor_date {
+        let mut dayi = 1;
+        while res <= *anchor_date {
+            res = anchor_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
+            panic!("Next Date for {} frequency is out of bounds, check chrono internals for the last date available", Frequency::Annual);
+        });
+        dayi += 1;
+        res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
+        }
+    }
+    return res; 
+}
+
+
+
+
+// Aux function to add years since chrono doesn't provide one.
+fn checked_add_years(date: &NaiveDate, years_to_add: i32) -> Option<NaiveDate> {
+    let current_year = date.year();
+    let current_month = date.month();
+    let current_day = date.day();
+
+    let new_year = current_year + years_to_add;
+
+    // Create a new date with the updated year while preserving the current month and day
+    NaiveDate::from_ymd_opt(new_year, current_month, current_day)
 }
                        
 
@@ -159,8 +198,8 @@ pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
         },
 
         Frequency::Annual => {
-            let delta = Months::new(12);
-            return force_add_months_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
+            let delta = 1;
+            return force_add_years_adjust(anchor_date, delta, opt_calendar, opt_adjust_rule);
         },
 
         Frequency::Once => {return *anchor_date;}
@@ -176,7 +215,7 @@ pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScheduleIterator<'a> {
     schedule: &'a Schedule<'a>,
-    anchor: NaiveDate
+    anchor: NaiveDate,
 }
 
 impl<'a> ScheduleIterator<'a> {

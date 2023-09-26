@@ -48,13 +48,13 @@ impl Calendar {
         Self { weekend: HashSet::new(), holidays: HashSet::new() }
     }
     /// Get the holidays in the Calendar
-    pub fn get_holidays(self) -> HashSet<NaiveDate> {
-        return self.holidays;
+    pub fn get_holidays(&self) -> &HashSet<NaiveDate> {
+        return &self.holidays;
     }
 
     /// Get the weekend in the Calendar
-    pub fn get_weekend(self) -> HashSet<Weekday> {
-        return self.weekend;
+    pub fn get_weekend(&self) -> &HashSet<Weekday> {
+        return &self.weekend;
     }
 
 
@@ -130,7 +130,7 @@ mod tests {
         let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
         cal.add_holidays(&new_holidays);
         let res = cal.get_holidays();
-        assert_eq!(res, new_holidays);
+        assert_eq!(res, &new_holidays);
     }
 
     // get_weekend function test
@@ -140,7 +140,7 @@ mod tests {
         let new_weekend: HashSet<Weekday> = vec![Weekday::Mon].into_iter().collect();
         cal.add_weekends(&new_weekend);
         let res = cal.get_weekend();
-        assert_eq!(res, new_weekend);
+        assert_eq!(res, &new_weekend);
 
     }
 
