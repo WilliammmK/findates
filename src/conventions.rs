@@ -175,7 +175,7 @@ impl FromStr for Frequency {
 
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
-/// Date units.
+// Date units. *** For future implementation
 pub enum DateUnit {
     D,          // Calendar day
     B,          // Business day
@@ -186,6 +186,7 @@ pub enum DateUnit {
 
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+// Tenors *** For future implementation.
 pub enum Tenor {
     _ON,
     _TN,

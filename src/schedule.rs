@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use chrono::{NaiveDate, Duration, Months, Datelike, Days};
+use chrono::{NaiveDate, Duration, Months, Days};
 
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, Frequency};

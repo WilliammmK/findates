@@ -13,11 +13,11 @@ use std::collections::HashSet;
 
 // Findates imports
 use findates::algebra;
-use findates::calendar::{Calendar};
+use findates::calendar::Calendar;
 use findates::conventions::*;
-use findates::schedule::{self, Schedule};
+use findates::schedule::Schedule;
 // Chrono imports
-use chrono::{Months,Weekday,NaiveDate, Datelike};
+use chrono::{Weekday,NaiveDate, Datelike};
 
 
 
@@ -108,9 +108,6 @@ let christmas_days = christmas_day_sch.generate(
                                                     &christmas_day,
                                                     &algebra::checked_add_years(&christmas_day, 10).unwrap()).unwrap();
 println!("Christmas dates: {:?}", &christmas_days);
-// ny_fed_calendar.add_holidays(&christmas_days.into_iter().collect());
-
-// println!("Holidays so far: {:?}", &ny_fed_calendar.get_holidays());
 
 // And Veterans day.
 let veterans_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 11,11).unwrap();
@@ -230,19 +227,15 @@ let maturity_date = NaiveDate::from_ymd_opt(2033, 8, 15).unwrap();
 // The interest calculation dates will be February 15 and August 15,
 // So lets create those dates until the maturity of the bond using a schedule.
 let coupon_schedule = Schedule::new(Frequency::Semiannual, None, None);
-let mut coupon_dates = coupon_schedule.generate(&issue_date, &maturity_date);
+let coupon_dates = coupon_schedule.generate(&issue_date, &maturity_date);
 let mut coupon_dates_list = coupon_dates.unwrap().into_iter().collect::<Vec<_>>();
 coupon_dates_list.sort();
-// let mut for_print = coupon_dates.clone().unwrap().into_iter().collect::<Vec<_>>();
-// for_print.sort();
 println!("The coupon dates are: {:?}", &coupon_dates_list);
 
 // Great! Those are the unadjusted coupon dates, that we can use to 
 // calculate the day count fraction for the coupons. Treasury notes use a 30/360
 // day count convention, so lets calculate that:
 let mut dcfs: Vec<f64> = vec![  ];
-let mut i: i32;
-// let range = 0 .. coupon_dates_list.len() as i32;
 for i in 0 .. (coupon_dates_list.len() - 1) {
     let dcf = algebra::day_count_fraction(coupon_dates_list.get(i).unwrap(),
                                             coupon_dates_list.get(i + 1).unwrap(), DayCount::D30360Euro, None, None);
