@@ -1,5 +1,4 @@
-//! # Findates
-//! A library for dates and date operations required by financial products.
+//! # Findates": A library for dates and date operations required by financial products.
 //! 
 //! Any basic calculation for financial products references a notion of time. Multiple conventions exist 
 //! so that computation of time in discrete periods can be achieved. While there are multiple resources for
