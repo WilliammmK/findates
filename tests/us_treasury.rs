@@ -3,12 +3,7 @@
 // NY Federal Reserve published calendar: https://www.frbservices.org/about/holiday-schedules.
 
 use std::collections::HashSet;
-
-use chrono::{NaiveDate, Weekday, Datelike};
-use findates::algebra;
-use findates::calendar::{Calendar, basic_calendar};
-use findates::schedule::Schedule;
-use findates::conventions::{Frequency, AdjustRule, DayCount};
+use chrono::NaiveDate;
 
 mod setup;
 
@@ -16,7 +11,7 @@ mod setup;
 #[test]
 fn holiday_test () {
     // These dates have already been modified according to the asterisks in the link.
-    let dates_str = ["02/1/2023",	"01/1/2024",	"01/1/2025",	"01/1/2026",	"01/1/2027",
+    let dates_str = [   "02/1/2023",	"01/1/2024",	"01/1/2025",	"01/1/2026",	"01/1/2027",
                                     "16/1/2023",	"15/1/2024",	"20/1/2025",	"19/1/2026",	"18/1/2027",
                                     "20/2/2023",	"19/2/2024",	"17/2/2025",	"16/2/2026",	"15/2/2027",
                                     "29/5/2023",	"27/5/2024",	"26/5/2025",	"25/5/2026",	"31/5/2027",
@@ -53,13 +48,13 @@ fn day_count_fractions_test () {
     // always considering a half year, i.e. the 30/360 convention. This essentially
     // means that all of the fractions should be 0.5. It is a 10 year note, so
     // there are a total of 19 coupons to be paid including the one at maturity.
-    let expected = vec![0.5;19];    
+    let expected = vec![0.5;20];    
     assert_eq!(expected, coupon_fractions );
 
 }
 
 #[test]
-fn _settlement_dates_test () {
+fn settlement_dates_test () {
     // U.S. Calendar again
     let built_calendar = setup::calendar_setup();
     // Ouputs for the Treasury Note test
@@ -71,7 +66,7 @@ fn _settlement_dates_test () {
     // dates, the below was retrieved from the Security Description page
     // from Bloomber Data Services for CUSIP 91282CHT1
 
-    let dates_str = [   "2024-02-15",	" 2024-08-15",	" 2025-02-18",	" 2025-08-15",	" 2026-02-17"
+    let dates_str = [   "2023-08-15",   "2024-02-15",	" 2024-08-15",	" 2025-02-18",	" 2025-08-15",	" 2026-02-17"
                                 ,	" 2026-08-17",	" 2027-02-16",	" 2027-08-16",	" 2028-02-15"
                                 ,	" 2028-08-15",	" 2029-02-15",	" 2029-08-15",	" 2030-02-15"
                                 ,	" 2030-08-15",	" 2031-02-18",	" 2031-08-15",	" 2032-02-17"

@@ -6,7 +6,7 @@ use std::collections::HashSet;
 
 use chrono::{NaiveDate, Weekday, Datelike};
 use findates::algebra;
-use findates::calendar::{Calendar, basic_calendar};
+use findates::calendar::Calendar;
 use findates::schedule::Schedule;
 use findates::conventions::{Frequency, AdjustRule, DayCount};
 
@@ -23,34 +23,34 @@ pub fn calendar_setup () -> Calendar {
 
     // Calculated all holiday dates for the next ten years and add them to the calendar
     // New Years
-    let new_year_day: NaiveDate = NaiveDate::from_ymd_opt(2022, 1, 1).unwrap();
+    let new_year_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
     let new_year_schedule: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
-    let new_years: HashSet<NaiveDate> = new_year_schedule.generate(&new_year_day, 
+    let new_years: Vec<NaiveDate> = new_year_schedule.generate(&new_year_day, 
                                                               &algebra::checked_add_years(&new_year_day, 10).unwrap()).unwrap();
     
     // 4th of July
-    let independence_day: NaiveDate = NaiveDate::from_ymd_opt(2022, 7,4).unwrap();
+    let independence_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 7,4).unwrap();
     let independence_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
     let indep_days = independence_day_sch.generate(
                                                         &independence_day,
                                                         &algebra::checked_add_years(&independence_day, 10).unwrap()).unwrap();
 
     // Christmas 
-    let christmas_day: NaiveDate = NaiveDate::from_ymd_opt(2022, 12,25).unwrap();
+    let christmas_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 12,25).unwrap();
     let christmas_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
     let christmas_days = christmas_day_sch.generate(
                                                         &christmas_day,
                                                         &algebra::checked_add_years(&christmas_day, 10).unwrap()).unwrap();
 
     // Veterans day
-    let veterans_day: NaiveDate = NaiveDate::from_ymd_opt(2022, 11,11).unwrap();
+    let veterans_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 11,11).unwrap();
     let veterans_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
     let veterans_days = veterans_day_sch.generate(
                                                         &veterans_day,
                                                         &algebra::checked_add_years(&veterans_day, 10).unwrap()).unwrap();
 
     // Juneteenth
-    let juneteenth_day: NaiveDate = NaiveDate::from_ymd_opt(2022, 06,19).unwrap();
+    let juneteenth_day: NaiveDate = NaiveDate::from_ymd_opt(2023, 06,19).unwrap();
     let juneteenth_day_sch: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
     let juneteenth_days = juneteenth_day_sch.generate(
                                                         &juneteenth_day,
@@ -58,31 +58,31 @@ pub fn calendar_setup () -> Calendar {
 
     // Thanksgiving
     let years = 2023 ..= 2033;
-    let thanksgiving_days: HashSet<NaiveDate>;
+    let thanksgiving_days: Vec<NaiveDate>;
     thanksgiving_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 11, Weekday::Thu, 4).unwrap())
                                         .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                         .collect();
     
     // Labor day
-    let labor_days: HashSet<NaiveDate>;
+    let labor_days: Vec<NaiveDate>;
     labor_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 9, Weekday::Mon, 1).unwrap())
                                 .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                 .collect();
     
     // Columbus day
-    let columbus_days: HashSet<NaiveDate>;
+    let columbus_days: Vec<NaiveDate>;
     columbus_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 10, Weekday::Mon, 2).unwrap())
                                 .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                 .collect();
 
     // Martin Luther King day
-    let mlkjr_days: HashSet<NaiveDate>;
+    let mlkjr_days: Vec<NaiveDate>;
     mlkjr_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 1, Weekday::Mon, 3).unwrap())
                                 .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                 .collect();
 
     // Washington day
-    let washington_days: HashSet<NaiveDate>;
+    let washington_days: Vec<NaiveDate>;
     washington_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 2, Weekday::Mon, 3).unwrap())
                                 .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                 .collect();
@@ -94,7 +94,7 @@ pub fn calendar_setup () -> Calendar {
         return may_31st - chrono::Duration::days(delta as i64);
     }
     
-    let memorial_days: HashSet<NaiveDate>;
+    let memorial_days: Vec<NaiveDate>;
     memorial_days = years.clone().map(|x| last_monday_of_may(x))
                                    .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                    .collect();
@@ -135,11 +135,7 @@ pub fn payment_schedule_setup (calendar: &Calendar) -> (Vec<NaiveDate>, Vec<f64>
     // Coupon dates
     let coupon_schedule = Schedule::new(Frequency::Semiannual, None, None);
     let coupon_dates = coupon_schedule.generate(&issue_date, &maturity_date);
-    let mut coupon_dates_list: Vec<NaiveDate> = coupon_dates.unwrap().into_iter().collect();
-    // Add the maturity date
-    coupon_dates_list.push(maturity_date);
-    coupon_dates_list.sort();
-    
+    let coupon_dates_list: Vec<NaiveDate> = coupon_dates.unwrap().into_iter().collect();
     
     // Calculate day count fractions
     let mut dcfs: Vec<f64> = vec![  ];

@@ -1,21 +1,14 @@
-//! Holiday Calendar objects. Essentially a list of dates that are not
-//! "business days". These can be National or Local holidays usually,
-//! but any other day there might be no settlement or trading.
+//! Holiday Calendar objects.
+//! Essentially, a list of dates that are not "business days". 
+//! These can be National or Local holidays, but any other day there might be no settlement or trading. 
+//! A work week can also be defined, with different weekdays as non-working days.
 
 use std::collections::HashSet;
-// use std::hash::Hasher;
-// use std::hash::Hash;
-// use std::iter::Map;
-
 use chrono::Weekday;
 use chrono::NaiveDate;
 
-// use itertools::Itertools;
 
 /// A Calendar representation.
-/// Essentially a list of dates that are not
-/// "business days". These can be National or Local holidays usually,
-/// but any other day there might be no settlement or trading.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Calendar {
     pub weekend:   HashSet<Weekday>,          // Which weekdays are not good working days

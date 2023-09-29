@@ -1,13 +1,10 @@
-/// Functions using Schedules, Calendars and the Conventions.
-/// A more functional approach was taken in this module,
-/// with no side effects or altering of internal states.
+//! Functions using Schedules, Calendars and the Conventions.
+//! A more functional approach was taken in this module,
+//! with no superfluous side effects or altering of internal states.
 
 use chrono::{NaiveDate, Datelike, Days};
 use crate::calendar::Calendar;
 use crate::conventions::{DayCount, AdjustRule};
-
-
-pub struct Date(NaiveDate);
 
 
 

@@ -1,6 +1,5 @@
-//! Day count conventions enumerations and its related functions.
-//! Initial conventions here are the same as the ones in Quantlib's
-//! Date and time calculations. 
+//! Enumerations for the different market conventions and its related functions.
+ 
 
 use std::fmt;
 use std::str::FromStr;
@@ -17,8 +16,8 @@ pub enum DayCount {
     D30365    
 }
 
-// # Trait Implementations 
-// Display trait for the daycount enum. Keep it consistent with the actual variant.
+/// # Trait Implementations 
+/// Display trait for the daycount enum. Keep it consistent with the actual variant.
 impl fmt::Display for DayCount {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
@@ -112,17 +111,28 @@ impl FromStr for AdjustRule {
 /// Descriptions directly copied from quantlib docs: https://www.quantlib.org/reference/group__datetime.html 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 pub enum Frequency {
-    Once, // only once, e.g. a zero coupon
-    Annual, // once a year
-    Semiannual, // twice a year
-    EveryFourthMonth, // every fourth month
-    Quarterly, // every fourth month
-    Bimonthly, // every second month
-    Monthly, // once a month
-    EveryFourthWeek, // every fourth week
-    Biweekly, // every second week
-    Weekly, // once a week
-    Daily, // once a day
+    /// only once, e.g. a zero coupon
+    Once, 
+    /// once a year
+    Annual, 
+    /// twice a year
+    Semiannual, 
+    /// every fourth month
+    EveryFourthMonth, 
+    /// every fourth month
+    Quarterly, 
+    /// every second month
+    Bimonthly,
+    /// once a month 
+    Monthly, 
+    /// every fourth week
+    EveryFourthWeek, 
+    /// every second week
+    Biweekly,
+    /// once a week 
+    Weekly, 
+    /// once a day
+    Daily,
 }
 
 // Display trait implementation for the Frequency enum.
@@ -170,38 +180,6 @@ impl FromStr for Frequency {
         }
     }
 }
-
-
-
-
-#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
-// Date units. *** For future implementation
-pub enum DateUnit {
-    D,          // Calendar day
-    B,          // Business day
-    W,          // Week
-    M,          // Month
-    Y           // Year
-}
-
-
-#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
-// Tenors *** For future implementation.
-pub enum Tenor {
-    _ON,
-    _TN,
-    _SN,
-    _1W,
-    _2W,
-    _3W,
-    _4W,
-    _1M,
-    _2M,
-
-}
-
-
-
 
 
 

@@ -71,7 +71,7 @@ println!("List of NY dates: {:?}", new_year_iterator.take(4).collect::<Vec<Naive
 // Great! But we don't need to explicitly create an iterator
 // we just need the NY dates for the next 5 years, so we can just use the
 // generate method.
-let new_years: HashSet<NaiveDate> = new_year_schedule.generate(&new_year_day, 
+let new_years: Vec<NaiveDate> = new_year_schedule.generate(&new_year_day, 
                                                     &algebra::checked_add_years(&new_year_day, 10).unwrap())
                                                     .expect("This should work");
 println!("New Year days: {:?}", &new_years);
@@ -81,7 +81,7 @@ println!("New Year days: {:?}", &new_years);
 // fall on a Saturday and on a Monday if they fall on a Sunday.
 // To achieve that, we can make use of the Nearest Adjustment Rule:
 let new_year_schedule: Schedule = Schedule::new(Frequency::Annual, Some(&ny_fed_calendar), Some(AdjustRule::Nearest));
-let real_new_years: HashSet<NaiveDate> = new_year_schedule.generate(&new_year_day, 
+let real_new_years: Vec<NaiveDate> = new_year_schedule.generate(&new_year_day, 
     &algebra::checked_add_years(&new_year_day, 10).unwrap())
     .expect("This should work");
 println!("The actual observed days: {:?}", &real_new_years);
@@ -129,31 +129,31 @@ println!("Juneteenth dates: {:?}", &juneteenth_days);
 // is made easy using the functionalities from chrono and the use of closures.
 // Let's start
 let years = 2024 ..= 2033;
-let thanksgiving_days: HashSet<NaiveDate>;
+let thanksgiving_days: Vec<NaiveDate>;
 thanksgiving_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 11, Weekday::Thu, 4).unwrap())
                                      .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                      .collect();
 println!("Thanksgiving dates: {:?}", &thanksgiving_days);
 
-let labor_days: HashSet<NaiveDate>;
+let labor_days: Vec<NaiveDate>;
 labor_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 9, Weekday::Mon, 1).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
 println!("Labor Day dates: {:?}", &labor_days);
 
-let columbus_days: HashSet<NaiveDate>;
+let columbus_days: Vec<NaiveDate>;
 columbus_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 10, Weekday::Mon, 2).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
 println!("Columbus Day dates: {:?}", &columbus_days);
 
-let mlkjr_days: HashSet<NaiveDate>;
+let mlkjr_days: Vec<NaiveDate>;
 mlkjr_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 1, Weekday::Mon, 3).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
 println!("MLK Jr Day dates: {:?}", &mlkjr_days);
 
-let washington_days: HashSet<NaiveDate>;
+let washington_days: Vec<NaiveDate>;
 washington_days = years.clone().map(|x| NaiveDate::from_weekday_of_month_opt(x, 2, Weekday::Mon, 3).unwrap())
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
@@ -166,7 +166,7 @@ fn last_monday_of_may (year: i32) -> NaiveDate {
     return may_31st - chrono::Duration::days(delta as i64);
 }
 
-let memorial_days: HashSet<NaiveDate>;
+let memorial_days: Vec<NaiveDate>;
 memorial_days = years.clone().map(|x| last_monday_of_may(x))
                                .map(|x| algebra::adjust(&x, Some(&ny_fed_calendar), Some(AdjustRule::Nearest)))
                                .collect();
