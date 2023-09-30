@@ -44,7 +44,7 @@ impl FromStr for DayCount {
             "Act360"     => Ok(DayCount::Act360),
             "Act365"     => Ok(DayCount::Act365),
             "Bd2532"     => Ok(DayCount::Bd252),
-            "ActActIsda" => Ok(DayCount::ActActISDA),
+            "ActActISDA" => Ok(DayCount::ActActISDA),
             "D30360Euro" => Ok(DayCount::D30360Euro),
             "D30365"     => Ok(DayCount::D30365),
             _            => Err(ParseDayCountError)
@@ -187,7 +187,44 @@ impl FromStr for Frequency {
 /// Tests
 #[cfg(test)]
 mod tests {
-    
+
+    use super::*;
+
+    #[test]
+    fn from_string_parse_test() {
+        let from_str = DayCount::from_str("ActActISDA");
+        assert_eq!(DayCount::ActActISDA, from_str.unwrap());
+    }
+
+    #[test]
+    #[should_panic]
+    fn incorrect_string_panic_test() {
+        // Case sensitive, so panics if case does not match
+        let _from_str = DayCount::from_str("ActActIsda").unwrap();
+
+        let _from_str = DayCount::from_str("D30360ISDA").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn not_implemented_convention_panic_test() {
+        // Panics as the convention has not been implemented yet.
+        let _from_str = DayCount::from_str("D30360ISDA").unwrap();
+    }
+
+    #[test]
+    fn to_string_test () {
+        let conv = AdjustRule::HalfMonthModFollowing;
+        assert_eq!(conv.to_string(), "HalfMonthModFollowing");
+    }
+
+    #[test]
+    fn eq_trait_test () {
+        let conv = Frequency::EveryFourthMonth;
+        assert_eq!(conv, Frequency::EveryFourthMonth);
+    }
+
+
 
 
 }
