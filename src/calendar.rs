@@ -11,8 +11,8 @@ use chrono::NaiveDate;
 /// A Calendar representation.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Calendar {
-    pub weekend:   HashSet<Weekday>,          // Which weekdays are not good working days
-    pub holidays:  HashSet<NaiveDate>,        // Which days of the year are not good working days
+    weekend:   HashSet<Weekday>,          // Which weekdays are not good working days
+    holidays:  HashSet<NaiveDate>,        // Which days of the year are not good working days
     
 }
 
