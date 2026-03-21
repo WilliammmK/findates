@@ -1,16 +1,14 @@
 //! A date schedule that complies to a set of rules and conventions.
-//! 
+//!
 
+use chrono::{Days, Duration, Months, NaiveDate};
 
-use chrono::{NaiveDate, Duration, Months, Days};
-
+use crate::algebra::{self, adjust, checked_add_years};
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, Frequency};
-use crate::algebra::{self, adjust, checked_add_years};
-
 
 /// A Schedule.
-/// The Option wrapper for the calendar and adjust_rule fields allow for 
+/// The Option wrapper for the calendar and adjust_rule fields allow for
 /// defining a schedule without adjustments.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Schedule<'a> {
@@ -19,50 +17,67 @@ pub struct Schedule<'a> {
     pub adjust_rule: Option<AdjustRule>,
 }
 
-
 /// Associated Schedule functions
 impl<'a> Schedule<'a> {
-
     /// Create a new Schedule with a Frequency, Calendar and Adjust Rule
-    pub fn new (frequency: Frequency, opt_calendar: Option<&'a Calendar>, opt_adjust_rule: Option<AdjustRule>) -> Self {
-        Self {frequency:frequency, calendar:opt_calendar, adjust_rule: opt_adjust_rule}
+    pub fn new(
+        frequency: Frequency,
+        opt_calendar: Option<&'a Calendar>,
+        opt_adjust_rule: Option<AdjustRule>,
+    ) -> Self {
+        Self {
+            frequency: frequency,
+            calendar: opt_calendar,
+            adjust_rule: opt_adjust_rule,
+        }
     }
 
     /// Create an iterator as a method
-    pub fn iter (&self, anchor: NaiveDate) -> ScheduleIterator {
-        ScheduleIterator { schedule: self, anchor: anchor }
+    pub fn iter(&self, anchor: NaiveDate) -> ScheduleIterator {
+        ScheduleIterator {
+            schedule: self,
+            anchor: anchor,
+        }
     }
 
     /// Generate a vector of dates for a given schedule with a start and an end date, including both.
-    pub fn generate (&self, anchor_date: &NaiveDate, end_date: &NaiveDate ) -> Result<Vec<NaiveDate>, &'static str> {
-        // Check input dates       
+    pub fn generate(
+        &self,
+        anchor_date: &NaiveDate,
+        end_date: &NaiveDate,
+    ) -> Result<Vec<NaiveDate>, &'static str> {
+        // Check input dates
         if end_date <= anchor_date {
-            return  Err("Anchor date must be before end date");
-        } 
+            return Err("Anchor date must be before end date");
+        }
         // Use the iterator to collect into a Vec
         else {
-            let  mut res: Vec<NaiveDate> = vec![adjust(anchor_date, self.calendar, self.adjust_rule)];
+            let mut res: Vec<NaiveDate> =
+                vec![adjust(anchor_date, self.calendar, self.adjust_rule)];
             let iter = self.iter(*anchor_date);
-            let mut res_next: Vec<NaiveDate> =  iter.take_while(|x| x <= &end_date)
-                                .map(|x| adjust(&x, self.calendar, self.adjust_rule))
-                                .collect();
-            
+            let mut res_next: Vec<NaiveDate> = iter
+                .take_while(|x| x <= &end_date)
+                .map(|x| adjust(&x, self.calendar, self.adjust_rule))
+                .collect();
+
             res.append(&mut res_next);
             res.dedup();
-            
+
             return Ok(res);
         }
     }
-    
 }
 
-
-// For the case of Preceding, ModFollowing, Nearest, etc it will keep giving 
+// For the case of Preceding, ModFollowing, Nearest, etc it will keep giving
 // the function might simply return the same as anchor date after adjustment.
 // The loop below forces that the returned date is after the anchor date.
 // Should only be an issue for the Daily Frequency, but it covers all cases.
-fn force_adjust ( anchor_date: &NaiveDate, next_date: &NaiveDate, opt_calendar: Option<&Calendar>
-                       , opt_adjust_rule: Option<AdjustRule>) -> NaiveDate {    
+fn force_adjust(
+    anchor_date: &NaiveDate,
+    next_date: &NaiveDate,
+    opt_calendar: Option<&Calendar>,
+    opt_adjust_rule: Option<AdjustRule>,
+) -> NaiveDate {
     let mut res: NaiveDate = algebra::adjust(next_date, opt_calendar, opt_adjust_rule);
     // Case where the adjustment brings the date back to the same as the anchor
     if res <= *anchor_date {
@@ -75,70 +90,62 @@ fn force_adjust ( anchor_date: &NaiveDate, next_date: &NaiveDate, opt_calendar: 
             res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
         }
     }
-    return res; 
+    return res;
 }
-
-
-
-                       
-
 
 // Gets the next date given an anchor date, a schedule and
 // a frequency. The function will not adjust the anchor date,
 // but it will adjust the next date if a calendar and adjust rule is passed.
-pub fn schedule_next ( anchor_date: &NaiveDate, frequency: Frequency) -> Option<NaiveDate> {
-    
+pub fn schedule_next(anchor_date: &NaiveDate, frequency: Frequency) -> Option<NaiveDate> {
     // Calculate next for each of the Frequencies.
     match frequency {
         Frequency::Daily => {
             return anchor_date.checked_add_days(Days::new(1));
-        },
-        
+        }
+
         Frequency::Weekly => {
             return anchor_date.checked_add_signed(Duration::weeks(1));
-        },
-        
+        }
+
         Frequency::Biweekly => {
             return anchor_date.checked_add_signed(Duration::weeks(2));
-        },
+        }
 
         Frequency::EveryFourthWeek => {
             return anchor_date.checked_add_signed(Duration::weeks(4));
-        },
+        }
 
         Frequency::Monthly => {
             // There is no months Duration, so using Months struct from Chrono
             return anchor_date.checked_add_months(Months::new(1));
-        },
+        }
 
         Frequency::Bimonthly => {
             return anchor_date.checked_add_months(Months::new(2));
-        },
+        }
 
         Frequency::Quarterly => {
             return anchor_date.checked_add_months(Months::new(3));
-        },
+        }
 
         Frequency::EveryFourthMonth => {
             return anchor_date.checked_add_months(Months::new(4));
-        },
+        }
 
         Frequency::Semiannual => {
             return anchor_date.checked_add_months(Months::new(6));
-        },
+        }
 
         Frequency::Annual => {
             let delta = 1;
             return checked_add_years(anchor_date, delta);
-        },
+        }
 
-        Frequency::Once => {return Some(*anchor_date);}
-
+        Frequency::Once => {
+            return Some(*anchor_date);
+        }
     }
-
-
 }
-
 
 /// Iterator over dates of a schedule.
 /// This is an unbounded
@@ -149,8 +156,11 @@ pub struct ScheduleIterator<'a> {
 }
 
 impl<'a> ScheduleIterator<'a> {
-    pub fn new (schedule: &'a Schedule<'a>, anchor: NaiveDate) -> Self {
-        Self {schedule: schedule, anchor: anchor}
+    pub fn new(schedule: &'a Schedule<'a>, anchor: NaiveDate) -> Self {
+        Self {
+            schedule: schedule,
+            anchor: anchor,
+        }
     }
 }
 
@@ -164,125 +174,13 @@ impl<'a> Iterator for ScheduleIterator<'a> {
 }
 
 // Next function for the Schedule iterator
-fn schedule_iterator_next<'a> (schedule: & Schedule, anchor: NaiveDate) -> Option<NaiveDate> {
-    
-   schedule_next(&anchor, schedule.frequency)  
-    
+fn schedule_iterator_next<'a>(schedule: &Schedule, anchor: NaiveDate) -> Option<NaiveDate> {
+    schedule_next(&anchor, schedule.frequency)
 }
 
-pub fn schedule_next_adjusted<'a> (schedule: & Schedule, anchor: NaiveDate) -> NaiveDate {
+pub fn schedule_next_adjusted<'a>(schedule: &Schedule, anchor: NaiveDate) -> NaiveDate {
     // Call next and then adjust.
-    let next = schedule_next(&anchor, schedule.frequency).expect("Next date for this schedule is out of bounds or malformed");
+    let next = schedule_next(&anchor, schedule.frequency)
+        .expect("Next date for this schedule is out of bounds or malformed");
     force_adjust(&anchor, &next, schedule.calendar, schedule.adjust_rule)
-         
-}
-    
-
-
-
-
-/// Unit Tests
-#[cfg(test)]
-mod tests {
-    use std::collections::HashSet;
-    use chrono::{NaiveDate, Datelike};
-    use crate::calendar as c;
-    use crate::conventions::{Frequency, AdjustRule };
-    use super::Schedule;
-
-        // Setup for variables to be used in multiples tests
-        struct Setup {
-            cal: c::Calendar,
-            _test_weekend: NaiveDate,
-            _test_holiday: NaiveDate
-        }
-        // Setup constructor
-        impl Setup {
-            fn  new() -> Self {
-                let mut basic_cal: c::Calendar = c::basic_calendar();
-                let christmas_day = NaiveDate::from_ymd_opt(2023,12,25).unwrap();
-                let boxing_day = NaiveDate::from_ymd_opt(2023,12,26).unwrap();
-                let new_holidays: HashSet<NaiveDate> =  [christmas_day, boxing_day].into_iter().collect();
-                let test_weekend: NaiveDate = NaiveDate::from_ymd_opt(2023, 9,2).unwrap(); // this is a Saturday
-                basic_cal.add_holidays(&new_holidays);
-                Self { 
-                        cal : basic_cal,
-                        _test_holiday: christmas_day,
-                        _test_weekend: test_weekend
-                }
-            }
-        }
-
-
-    // Schedule Iterator test
-    #[test]
-    fn daily_generator_test () {
-        let setup: Setup = Setup::new();
-        let cal: c::Calendar = setup.cal;
-        let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
-        let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 10, 9).unwrap();
-        // Create a new schedule
-        let sch = Schedule {frequency: Frequency::Daily, calendar: Some(&cal), adjust_rule: None};
-        let dates = sch.generate(&anchor, &end).unwrap();
-        // No adjustment, so expected is all dates from anchor to end.
-        let dates_str = [ "2023-09-30", "2023-10-01", "2023-10-02", "2023-10-03"
-                                    , "2023-10-04", "2023-10-05", "2023-10-06", "2023-10-07"
-                                    , "2023-10-08", "2023-10-09"];
-        let expected_dates: Vec<NaiveDate> = dates_str.into_iter().map(|x| NaiveDate::parse_from_str(x, "%Y-%m-%d").unwrap()).collect();
-        assert_eq!(expected_dates, dates);
-        // With an adjustment rule
-        let sch = Schedule {frequency: Frequency::Daily, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModPreceding)};
-        let dates = sch.generate(&anchor, &end).unwrap();
-        let dates_str = [ "2023-09-29", "2023-10-02", "2023-10-03"
-                                    , "2023-10-04", "2023-10-05", "2023-10-06", "2023-10-09"];
-        let expected_dates: Vec<NaiveDate> = dates_str.into_iter().map(|x| NaiveDate::parse_from_str(x, "%Y-%m-%d").unwrap()).collect();
-        assert_eq!(expected_dates, dates);
-    }
-
-    #[test]
-    fn weekly_generator_test () {
-        let setup: Setup = Setup::new();
-        let cal: c::Calendar = setup.cal;
-        let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
-        let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 11, 5).unwrap();
-        // Create a new schedule
-        let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: None};
-        let dates = sch.generate(&anchor, &end).unwrap();
-        // No adjustment, so expected is all dates from anchor to end.
-        let dates_str = ["2023-09-30", "2023-10-07", "2023-10-14", "2023-10-21", "2023-10-28", "2023-11-04"];
-        let expected_dates: Vec<NaiveDate> = dates_str.into_iter().map(|x| NaiveDate::parse_from_str(x, "%Y-%m-%d").unwrap()).collect();
-        assert_eq!(expected_dates, dates);
-        // With an adjustment rule
-        let sch = Schedule {frequency: Frequency::Weekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModFollowing)};
-        let dates = sch.generate(&anchor, &end).unwrap();
-        let dates_str = [ "2023-09-29", "2023-10-09", "2023-10-16", "2023-10-23", "2023-10-30", "2023-11-06"];
-        let expected_dates: Vec<NaiveDate> = dates_str.into_iter().map(|x| NaiveDate::parse_from_str(x, "%Y-%m-%d").unwrap()).collect();
-        assert_eq!(expected_dates, dates);
-    }
-
-    #[test]
-    fn biweekly_generator_test () {
-        let setup: Setup = Setup::new();
-        let cal: c::Calendar = setup.cal;
-        let anchor: NaiveDate = NaiveDate::from_ymd_opt(2023, 11, 26).unwrap();
-        let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 5).unwrap();
-        // Create a new schedule
-        let sch = Schedule {frequency: Frequency::Biweekly, calendar: Some(&cal), adjust_rule: None};
-        let dates = sch.generate(&anchor, &end).unwrap();
-        println!("dates are: {:?}", dates);
-        // No adjustment, so expected is all dates from anchor to end.
-        let dates_str = ["2023-11-26", "2023-12-10", "2023-12-24", "2024-01-07", "2024-01-21", "2024-02-04"];
-        let expected_dates: Vec<NaiveDate> = dates_str.into_iter().map(|x| NaiveDate::parse_from_str(x, "%Y-%m-%d").unwrap()).collect();
-        assert_eq!(expected_dates, dates);
-        // With an adjustment rule
-        let sch = Schedule {frequency: Frequency::Biweekly, calendar: Some(&cal), adjust_rule: Some(AdjustRule::ModPreceding)};
-        let dates = sch.generate(&anchor, &end).unwrap();
-        let dates_str = ["2023-11-24", "2023-12-08", "2023-12-22", "2024-01-05", "2024-01-19", "2024-02-02"];
-        let expected_dates: Vec<NaiveDate> = dates_str.into_iter().map(|x| NaiveDate::parse_from_str(x, "%Y-%m-%d").unwrap()).collect();
-        assert_eq!(expected_dates, dates);
-    }
-
-
-
-
 }
