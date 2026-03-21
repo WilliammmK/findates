@@ -17,22 +17,19 @@ fn is_business_day_test() {
 
     // Sunday should not be a business day
     let sunday = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Sun);
-    assert_eq!(
-        false,
-        algebra::is_business_day(&sunday.unwrap(), &basic_cal)
-    );
+    assert!(!algebra::is_business_day(&sunday.unwrap(), &basic_cal));
 
     // Monday should be a business day
     let monday = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Mon);
-    assert_eq!(true, algebra::is_business_day(&monday.unwrap(), &basic_cal));
+    assert!(algebra::is_business_day(&monday.unwrap(), &basic_cal));
 
     // Christmas should be a business day before being added to holidays
     let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
-    assert_eq!(true, algebra::is_business_day(&christmas_day, &basic_cal));
+    assert!(algebra::is_business_day(&christmas_day, &basic_cal));
 
     // After adding to calendar, Christmas should not be a business day
     basic_cal.add_holidays(&[christmas_day].into_iter().collect());
-    assert_eq!(false, algebra::is_business_day(&christmas_day, &basic_cal));
+    assert!(!algebra::is_business_day(&christmas_day, &basic_cal));
 }
 
 // ============================================================================
@@ -73,12 +70,8 @@ fn bus_days_between_test() {
     for i in 1..29 {
         let dt = NaiveDate::from_ymd_opt(2023, 9, i).unwrap();
         // Exclude weekends
-        if dt.weekday() == Weekday::Sat || dt.weekday() == Weekday::Sun {
-        }
-        // Include a Holiday
-        else if dt == hol {
-        } else {
-            test_schedule.push(dt)
+        if dt.weekday() != Weekday::Sat && dt.weekday() != Weekday::Sun && dt != hol {
+            test_schedule.push(dt);
         }
     }
 
