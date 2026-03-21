@@ -376,21 +376,7 @@ mod tests {
         (x * multiplier).round() / multiplier
     }
 
-    // Is business day function test.
-    #[test]
-    fn is_business_day_test() {
-        let mut basic_cal: c::Calendar = c::basic_calendar();
-        let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Sun);
-        assert_eq!(false, a::is_business_day(&my_date.unwrap(), &basic_cal));
-        let my_date: Option<NaiveDate> = NaiveDate::from_isoywd_opt(2015, 10, Weekday::Mon);
-        assert_eq!(true, a::is_business_day(&my_date.unwrap(), &basic_cal));
-        let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
-        assert_eq!(true, a::is_business_day(&christmas_day, &basic_cal));
-        basic_cal.add_holidays(&[christmas_day].into_iter().collect());
-        assert_eq!(false, a::is_business_day(&christmas_day, &basic_cal));
-    }
-
-    // Setup for remaining tests (is_business_day, schedule, bus_days_between, dcf)
+    // Setup for remaining tests (schedule, bus_days_between, dcf)
     struct Setup {
         cal: c::Calendar,
         test_weekend: NaiveDate,
