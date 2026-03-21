@@ -22,8 +22,7 @@ impl DayCountSetup {
         let mut basic_cal = calendar::basic_calendar();
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
-        let new_holidays: HashSet<NaiveDate> =
-            [christmas_day, boxing_day].into_iter().collect();
+        let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
         basic_cal.add_holidays(&new_holidays);
         Self { cal: basic_cal }
     }

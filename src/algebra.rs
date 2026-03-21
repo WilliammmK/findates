@@ -354,20 +354,3 @@ fn is_leap_year(year: i32) -> bool {
     // If the date is Some, it's a valid leap year; otherwise, it's not.
     date.is_some()
 }
-
-// Tests
-#[cfg(test)]
-mod tests {
-    use crate::algebra as a;
-    use crate::algebra::bus_day_schedule;
-    use crate::algebra::business_days_between;
-    use crate::calendar as c;
-    use crate::conventions::{AdjustRule, DayCount};
-    use chrono::Datelike;
-    use chrono::Days;
-    use chrono::NaiveDate;
-    use chrono::Weekday;
-    use std::collections::HashSet;
-
-    use super::day_count_fraction;
-}
