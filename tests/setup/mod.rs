@@ -10,6 +10,32 @@ use findates::calendar::Calendar;
 use findates::schedule::Schedule;
 use findates::conventions::{Frequency, AdjustRule, DayCount};
 
+/// Reusable test setup for adjust-rule behavior tests
+pub struct AdjustSetup {
+    pub cal: Calendar,
+    pub test_weekend: NaiveDate,
+    pub test_holiday: NaiveDate,
+}
+
+impl AdjustSetup {
+    /// Create a basic test setup with Christmas and Boxing Day as holidays,
+    /// and a Saturday as a test weekend date.
+    pub fn new() -> Self {
+        let mut basic_cal: Calendar = findates::calendar::basic_calendar();
+        let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let new_holidays: HashSet<NaiveDate> =
+            [christmas_day, boxing_day].into_iter().collect();
+        let test_weekend: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 2).unwrap(); // Saturday
+        basic_cal.add_holidays(&new_holidays);
+        Self {
+            cal: basic_cal,
+            test_holiday: christmas_day,
+            test_weekend: test_weekend,
+        }
+    }
+}
+
 // The setup function ouputs the calendar and schedule of dates
 // that will later be used in the different test functions.
 pub fn calendar_setup () -> Calendar {
