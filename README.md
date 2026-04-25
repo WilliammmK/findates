@@ -1,9 +1,11 @@
-# findates
-A Rust crate for dealing with dates in finance.
+# Findates
 
-findates provides core building blocks for working with dates in financial contexts, including calendars, business day conventions, day count calculations, and schedule generation.
+**Findates** is a Rust library for handling dates in financial applications — including schedules, business day adjustments, and day count conventions.
 
-It is designed to be simple, composable, and independent from larger quantitative finance frameworks.
+Any meaningful financial calculation relies on a notion of time. While there is extensive literature on pricing models and financial theory, much less attention is given to the practical task of constructing the time inputs those models depend on.
+
+Findates focuses on this layer:
+> generating correct schedules, applying conventions, and computing time/dates consistently.
 
 ---
 
@@ -21,62 +23,72 @@ Despite their importance, these are often:
 - tightly coupled to larger systems  
 - difficult to extend or maintain  
 
-findates focuses on solving these foundational problems in a clean, reusable way.
+Findates was developed to provide:
+- a **lightweight and focused alternative**
+- a **clear and modular structure**
+- an implementation aligned with **Rust’s strengths** (type safety, iterators, composability)
 
 ---
 
-## Features
+## Design Approach
 
-- Business day calendars  
-- Holiday rules and exceptions  
-- Business day adjustment conventions  
-- Day count conventions  
-- Schedule generation from rules  
+The library follows a deliberately simple structure, separating the main concepts involved in financial date handling:
 
----
+- `calendar`: definition of working days (weekends and holidays)
+- `conventions`: financial rules (adjustment rules, day count conventions)
+- `algebra`: core operations on dates
+- `schedule`: generation of date sequences based on frequency
 
-## Non-goals
+A more **functional approach** is taken where appropriate:
+- core operations are implemented as standalone functions
+- no hidden state or side effects
+- behavior is explicit through inputs (calendar, rules, conventions)
 
-findates is **not**:
-
-- a full quantitative finance library  
-- a pricing or risk engine  
-- a replacement for frameworks like QuantLib  
-
-It is intended to be used as a **foundation layer** within larger systems.
+At the same time, the design avoids unnecessary abstraction — the goal is clarity and practical usability rather than completeness or generality.
 
 ---
 
-## Example Use Cases
+## Key Features
 
-- Financial product cash flow generation  
-- Settlement and payment date calculations  
-- Treasury and back-office systems  
-- Quantitative models requiring date schedules  
-- Fintech infrastructure services  
-
----
-
-## Project Status
-
-This project is under active development.
-
-The API may evolve as the design is refined, but stability and clarity are priorities.
+- Business day determination based on custom calendars  
+- Date adjustment using standard financial conventions  
+- Frequency-based schedule generation  
+- Day count fraction calculations (e.g. Act/360, Act/365, 30/360, BD252)  
+- Iterator-based schedules for flexible usage  
 
 ---
 
-## Documentation
+## Example
 
-Detailed usage examples and API documentation are available via Rust docs:
+```rust
+use chrono::NaiveDate;
+use findates::calendar::basic_calendar;
+use findates::conventions::{AdjustRule, DayCount};
+use findates::algebra;
 
-```bash
-cargo doc --open
+let cal = basic_calendar();
+
+let start = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
+let end   = NaiveDate::from_ymd_opt(2023, 12, 24).unwrap();
+
+// Adjust dates according to business day rules
+let adj_start = algebra::adjust(&start, Some(&cal), Some(AdjustRule::Following));
+let adj_end   = algebra::adjust(&end,   Some(&cal), Some(AdjustRule::Following));
+
+// Compute day count fraction
+let dcf = algebra::day_count_fraction(
+    &adj_start,
+    &adj_end,
+    DayCount::Act360,
+    Some(&cal),
+    Some(AdjustRule::Following),
+);
 ```
-
 ---
 
-## Licenses
+### Licenses
 
 - **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 - **MIT License** ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
 

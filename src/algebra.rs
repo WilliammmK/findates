@@ -4,13 +4,17 @@
 
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, DayCount};
-use chrono::{Datelike, Days, NaiveDate};
+use crate::date::DateLike;
+use chrono::{Days, NaiveDate};
 
 /// Check if a date is a good business day in a given calendar.
-pub fn is_business_day(date: &NaiveDate, calendar: &Calendar) -> bool {
+pub fn is_business_day(date: &impl DateLike, calendar: &Calendar) -> bool {
     if calendar.get_weekend().contains(&date.weekday()) {
         false
-    } else if calendar.get_holidays().contains(date) {
+    } else if calendar
+        .get_holidays()
+        .contains(&NaiveDate::from_ymd_opt(date.year(), date.month(), date.day()).unwrap())
+    {
         false
     } else {
         true

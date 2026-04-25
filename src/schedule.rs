@@ -1,7 +1,8 @@
 //! A date schedule that complies to a set of rules and conventions.
 //!
 
-use chrono::{Days, Duration, Months, NaiveDate};
+use crate::FinDate;
+use chrono::{Days, Duration, Months};
 
 use crate::algebra::{self, adjust, checked_add_years};
 use crate::calendar::Calendar;
@@ -33,29 +34,28 @@ impl<'a> Schedule<'a> {
     }
 
     /// Create an iterator as a method
-    pub fn iter(&self, anchor: NaiveDate) -> ScheduleIterator {
+    pub fn iter(&self, anchor: FinDate) -> ScheduleIterator<'_> {
         ScheduleIterator {
             schedule: self,
-            anchor: anchor,
+            anchor,
         }
     }
 
     /// Generate a vector of dates for a given schedule with a start and an end date, including both.
     pub fn generate(
         &self,
-        anchor_date: &NaiveDate,
-        end_date: &NaiveDate,
-    ) -> Result<Vec<NaiveDate>, &'static str> {
+        anchor_date: &FinDate,
+        end_date: &FinDate,
+    ) -> Result<Vec<FinDate>, &'static str> {
         // Check input dates
         if end_date <= anchor_date {
             return Err("Anchor date must be before end date");
         }
         // Use the iterator to collect into a Vec
         else {
-            let mut res: Vec<NaiveDate> =
-                vec![adjust(anchor_date, self.calendar, self.adjust_rule)];
+            let mut res: Vec<FinDate> = vec![adjust(anchor_date, self.calendar, self.adjust_rule)];
             let iter = self.iter(*anchor_date);
-            let mut res_next: Vec<NaiveDate> = iter
+            let mut res_next: Vec<FinDate> = iter
                 .take_while(|x| x <= &end_date)
                 .map(|x| adjust(&x, self.calendar, self.adjust_rule))
                 .collect();
@@ -73,12 +73,12 @@ impl<'a> Schedule<'a> {
 // The loop below forces that the returned date is after the anchor date.
 // Should only be an issue for the Daily Frequency, but it covers all cases.
 fn force_adjust(
-    anchor_date: &NaiveDate,
-    next_date: &NaiveDate,
+    anchor_date: &FinDate,
+    next_date: &FinDate,
     opt_calendar: Option<&Calendar>,
     opt_adjust_rule: Option<AdjustRule>,
-) -> NaiveDate {
-    let mut res: NaiveDate = algebra::adjust(next_date, opt_calendar, opt_adjust_rule);
+) -> FinDate {
+    let mut res: FinDate = algebra::adjust(next_date, opt_calendar, opt_adjust_rule);
     // Case where the adjustment brings the date back to the same as the anchor
     if res <= *anchor_date {
         let mut dayi = 1;
@@ -96,7 +96,7 @@ fn force_adjust(
 // Gets the next date given an anchor date, a schedule and
 // a frequency. The function will not adjust the anchor date,
 // but it will adjust the next date if a calendar and adjust rule is passed.
-pub fn schedule_next(anchor_date: &NaiveDate, frequency: Frequency) -> Option<NaiveDate> {
+pub fn schedule_next(anchor_date: &FinDate, frequency: Frequency) -> Option<FinDate> {
     // Calculate next for each of the Frequencies.
     match frequency {
         Frequency::Daily => {
@@ -152,11 +152,11 @@ pub fn schedule_next(anchor_date: &NaiveDate, frequency: Frequency) -> Option<Na
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScheduleIterator<'a> {
     schedule: &'a Schedule<'a>,
-    anchor: NaiveDate,
+    anchor: FinDate,
 }
 
 impl<'a> ScheduleIterator<'a> {
-    pub fn new(schedule: &'a Schedule<'a>, anchor: NaiveDate) -> Self {
+    pub fn new(schedule: &'a Schedule<'a>, anchor: FinDate) -> Self {
         Self {
             schedule: schedule,
             anchor: anchor,
@@ -165,20 +165,20 @@ impl<'a> ScheduleIterator<'a> {
 }
 
 impl<'a> Iterator for ScheduleIterator<'a> {
-    type Item = NaiveDate;
+    type Item = FinDate;
     fn next(&mut self) -> Option<Self::Item> {
-        let res = schedule_iterator_next(&mut self.schedule, self.anchor);
+        let res = schedule_iterator_next(self.schedule, self.anchor);
         self.anchor = res.expect("Next date for this schedule is out of bounds.");
-        return res;
+        res
     }
 }
 
 // Next function for the Schedule iterator
-fn schedule_iterator_next<'a>(schedule: &Schedule, anchor: NaiveDate) -> Option<NaiveDate> {
+fn schedule_iterator_next<'a>(schedule: &Schedule, anchor: FinDate) -> Option<FinDate> {
     schedule_next(&anchor, schedule.frequency)
 }
 
-pub fn schedule_next_adjusted<'a>(schedule: &Schedule, anchor: NaiveDate) -> NaiveDate {
+pub fn schedule_next_adjusted<'a>(schedule: &Schedule, anchor: FinDate) -> FinDate {
     // Call next and then adjust.
     let next = schedule_next(&anchor, schedule.frequency)
         .expect("Next date for this schedule is out of bounds or malformed");

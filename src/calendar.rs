@@ -1,6 +1,6 @@
 //! Holiday Calendar objects.
 //! Essentially, a list of dates that are not "business days".
-//! These can be National or Local holidays, but any other day there might be no settlement or trading.
+//! These can be National or Local holidays, but also any other day there might be no settlement or trading.
 //! A work week can also be defined, with different weekdays as non-working days.
 
 use chrono::NaiveDate;
