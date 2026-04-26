@@ -2,12 +2,22 @@
 name = "findates"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.70"
 license = "MIT OR Apache-2.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Financial date arithmetic: business day calendars, day count conventions, and schedule generation."
+repository = "https://github.com/kobaraguilherme/findates"
+documentation = "https://docs.rs/findates"
+keywords = ["finance", "dates", "calendar", "daycount", "schedule"]
+categories = ["date-and-time", "mathematics"]
 
 [dependencies]
-chrono = "0.4.26"
-itertools = "0.14.0"
+chrono = "0.4"
+serde = { version = "1", features = ["derive"], optional = true }
+
+[dev-dependencies]
+itertools = "0.14"
+
+[features]
+serde = ["dep:serde", "chrono/serde"]
 
 

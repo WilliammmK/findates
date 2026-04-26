@@ -1,39 +1,110 @@
-//! A date schedule that complies to a set of rules and conventions.
+//! Frequency-based date schedule generation.
 //!
+//! A [`Schedule`] pairs a [`Frequency`] with an optional [`Calendar`] and
+//! [`AdjustRule`].  Calling [`Schedule::iter`] returns an unbounded lazy
+//! iterator; calling [`Schedule::generate`] collects dates up to a given
+//! end date into a `Vec`.
 
 use crate::FinDate;
-use chrono::{Days, Duration, Months};
+use chrono::{Datelike, Days, Months, NaiveDate};
 
 use crate::algebra::{self, adjust, checked_add_years};
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, Frequency};
 
-/// A Schedule.
-/// The Option wrapper for the calendar and adjust_rule fields allow for
-/// defining a schedule without adjustments.
+/// A date generation rule combining a frequency, an optional calendar, and an
+/// optional adjustment rule.
+///
+/// # Examples
+///
+/// ```rust
+/// use chrono::NaiveDate;
+/// use findates::schedule::Schedule;
+/// use findates::conventions::Frequency;
+///
+/// let anchor = NaiveDate::from_ymd_opt(2023, 8, 15).unwrap();
+/// let end    = NaiveDate::from_ymd_opt(2024, 8, 15).unwrap();
+/// let sched  = Schedule::new(Frequency::Semiannual, None, None);
+///
+/// let dates = sched.generate(&anchor, &end).unwrap();
+/// assert_eq!(dates[1], NaiveDate::from_ymd_opt(2024, 2, 15).unwrap());
+/// assert_eq!(dates[2], end);
+/// ```
+///
+/// ## End-of-month frequency
+///
+/// Use [`Frequency::EndOfMonth`] to always land on the last calendar day of
+/// each month, regardless of where the anchor falls.
+///
+/// ```rust
+/// use chrono::NaiveDate;
+/// use findates::schedule::Schedule;
+/// use findates::conventions::Frequency;
+///
+/// let anchor = NaiveDate::from_ymd_opt(2024, 1, 31).unwrap(); // Jan 31
+/// let end    = NaiveDate::from_ymd_opt(2024, 4, 30).unwrap();
+/// let sched  = Schedule::new(Frequency::EndOfMonth, None, None);
+///
+/// let dates = sched.generate(&anchor, &end).unwrap();
+/// // 2024-01-31, 2024-02-29 (leap), 2024-03-31, 2024-04-30
+/// assert_eq!(dates[1], NaiveDate::from_ymd_opt(2024, 2, 29).unwrap());
+/// assert_eq!(dates[2], NaiveDate::from_ymd_opt(2024, 3, 31).unwrap());
+/// assert_eq!(dates[3], NaiveDate::from_ymd_opt(2024, 4, 30).unwrap());
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Schedule<'a> {
+    /// The step frequency between consecutive dates.
     pub frequency: Frequency,
+    /// Optional calendar used to adjust each generated date.
     pub calendar: Option<&'a Calendar>,
+    /// Optional adjustment rule applied when a date falls on a non-business day.
     pub adjust_rule: Option<AdjustRule>,
 }
 
-/// Associated Schedule functions
 impl<'a> Schedule<'a> {
-    /// Create a new Schedule with a Frequency, Calendar and Adjust Rule
+    /// Creates a new [`Schedule`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use findates::schedule::Schedule;
+    /// use findates::conventions::Frequency;
+    ///
+    /// let sched = Schedule::new(Frequency::Monthly, None, None);
+    /// assert_eq!(sched.frequency, Frequency::Monthly);
+    /// ```
     pub fn new(
         frequency: Frequency,
         opt_calendar: Option<&'a Calendar>,
         opt_adjust_rule: Option<AdjustRule>,
     ) -> Self {
         Self {
-            frequency: frequency,
+            frequency,
             calendar: opt_calendar,
             adjust_rule: opt_adjust_rule,
         }
     }
 
-    /// Create an iterator as a method
+    /// Returns a lazy, unbounded iterator that yields the next date on each call.
+    ///
+    /// The first value yielded is the adjusted date *after* `anchor` (the anchor
+    /// itself is not included).  For [`Frequency::Zero`] the iterator is
+    /// immediately exhausted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use chrono::NaiveDate;
+    /// use findates::schedule::Schedule;
+    /// use findates::conventions::Frequency;
+    ///
+    /// let anchor = NaiveDate::from_ymd_opt(2024, 1, 31).unwrap();
+    /// let sched  = Schedule::new(Frequency::Monthly, None, None);
+    ///
+    /// let dates: Vec<_> = sched.iter(anchor).take(3).collect();
+    /// assert_eq!(dates[0], NaiveDate::from_ymd_opt(2024, 2, 29).unwrap()); // leap year
+    /// assert_eq!(dates[1], NaiveDate::from_ymd_opt(2024, 3, 29).unwrap());
+    /// ```
     pub fn iter(&self, anchor: FinDate) -> ScheduleIterator<'_> {
         ScheduleIterator {
             schedule: self,
@@ -41,146 +112,214 @@ impl<'a> Schedule<'a> {
         }
     }
 
-    /// Generate a vector of dates for a given schedule with a start and an end date, including both.
+    /// Generates a `Vec` of dates from `anchor_date` to `end_date` inclusive.
+    ///
+    /// The anchor date is included as the first element.  Consecutive raw dates
+    /// are stepped by the schedule's frequency through `end_date`, then
+    /// adjusted.  Duplicate dates (which can arise when an adjustment rule moves
+    /// two consecutive raw dates to the same business day) are removed.
+    ///
+    /// Stepping uses the **nominal (unadjusted)** date as the anchor for each
+    /// subsequent interval.  This preserves date integrity for fixed-term
+    /// financial instruments: an annual schedule anchored on 4 July will always
+    /// step to 4 July each year before applying the adjustment rule, so a
+    /// Saturday observation (Friday) never causes the next year to step from
+    /// Friday and land on a different nominal date.  Use [`Schedule::iter`] when
+    /// you instead want each step to begin from the previous *adjusted* date.
+    ///
+    /// Special case: for [`Frequency::Zero`], returns only the end date (adjusted
+    /// if a calendar is set).  This represents the maturity date of a zero-coupon
+    /// bond.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if `end_date <= anchor_date`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use chrono::NaiveDate;
+    /// use findates::calendar::basic_calendar;
+    /// use findates::conventions::{AdjustRule, Frequency};
+    /// use findates::schedule::Schedule;
+    ///
+    /// let cal    = basic_calendar();
+    /// let anchor = NaiveDate::from_ymd_opt(2023, 12, 29).unwrap(); // Friday
+    /// let end    = NaiveDate::from_ymd_opt(2024, 1, 5).unwrap();
+    /// let sched  = Schedule::new(Frequency::Weekly, Some(&cal), Some(AdjustRule::Following));
+    ///
+    /// let dates = sched.generate(&anchor, &end).unwrap();
+    /// assert_eq!(dates.first().unwrap(), &anchor);
+    /// ```
     pub fn generate(
         &self,
         anchor_date: &FinDate,
         end_date: &FinDate,
     ) -> Result<Vec<FinDate>, &'static str> {
-        // Check input dates
         if end_date <= anchor_date {
             return Err("Anchor date must be before end date");
         }
-        // Use the iterator to collect into a Vec
-        else {
-            let mut res: Vec<FinDate> = vec![adjust(anchor_date, self.calendar, self.adjust_rule)];
-            let iter = self.iter(*anchor_date);
-            let mut res_next: Vec<FinDate> = iter
-                .take_while(|x| x <= &end_date)
-                .map(|x| adjust(&x, self.calendar, self.adjust_rule))
-                .collect();
 
-            res.append(&mut res_next);
-            res.dedup();
-
-            return Ok(res);
+        // Special case for Frequency::Zero: return only the adjusted end date
+        if self.frequency == Frequency::Zero {
+            let adjusted_end = adjust(end_date, self.calendar, self.adjust_rule);
+            return Ok(vec![adjusted_end]);
         }
+
+        let mut res = vec![adjust(anchor_date, self.calendar, self.adjust_rule)];
+        let mut current = *anchor_date;
+        while let Some(next) = schedule_next(&current, self.frequency) {
+            if next > *end_date {
+                break;
+            }
+
+            res.push(adjust(&next, self.calendar, self.adjust_rule));
+            current = next;
+        }
+        res.dedup();
+        Ok(res)
     }
 }
 
-// For the case of Preceding, ModFollowing, Nearest, etc it will keep giving
-// the function might simply return the same as anchor date after adjustment.
-// The loop below forces that the returned date is after the anchor date.
-// Should only be an issue for the Daily Frequency, but it covers all cases.
+// When Preceding/ModFollowing/Nearest adjustments could return a date ≤ anchor,
+// keep stepping forward until the adjusted result is strictly after anchor.
+// Returns None if the search walks off the end of the representable date range.
 fn force_adjust(
     anchor_date: &FinDate,
     next_date: &FinDate,
     opt_calendar: Option<&Calendar>,
     opt_adjust_rule: Option<AdjustRule>,
-) -> FinDate {
-    let mut res: FinDate = algebra::adjust(next_date, opt_calendar, opt_adjust_rule);
-    // Case where the adjustment brings the date back to the same as the anchor
-    if res <= *anchor_date {
-        let mut dayi = 1;
-        while res <= *anchor_date {
-            res = next_date.checked_add_signed(Duration::days(dayi)).unwrap_or_else(|| {
-                panic!("Next Adjusted Date is out of bounds, check chrono internals for the last date available");
-            });
-            dayi += 1;
-            res = algebra::adjust(&res, opt_calendar, opt_adjust_rule);
-        }
+) -> Option<FinDate> {
+    let mut res = algebra::adjust(next_date, opt_calendar, opt_adjust_rule);
+    let mut day_i = 1u64;
+    while res <= *anchor_date {
+        let candidate = next_date.checked_add_days(Days::new(day_i))?;
+        res = algebra::adjust(&candidate, opt_calendar, opt_adjust_rule);
+        day_i += 1;
     }
-    return res;
+    Some(res)
 }
 
-// Gets the next date given an anchor date, a schedule and
-// a frequency. The function will not adjust the anchor date,
-// but it will adjust the next date if a calendar and adjust rule is passed.
-pub fn schedule_next(anchor_date: &FinDate, frequency: Frequency) -> Option<FinDate> {
-    // Calculate next for each of the Frequencies.
+// Internal building block. Returns the raw unadjusted next date for a given
+// frequency. Use schedule_next_adjusted for public-facing stepping.
+fn schedule_next(anchor_date: &FinDate, frequency: Frequency) -> Option<FinDate> {
     match frequency {
-        Frequency::Daily => {
-            return anchor_date.checked_add_days(Days::new(1));
+        Frequency::Daily => anchor_date.checked_add_days(Days::new(1)),
+        Frequency::Weekly => anchor_date.checked_add_days(Days::new(7)),
+        Frequency::Biweekly => anchor_date.checked_add_days(Days::new(14)),
+        Frequency::EveryFourthWeek => anchor_date.checked_add_days(Days::new(28)),
+        Frequency::Monthly => anchor_date.checked_add_months(Months::new(1)),
+        Frequency::EndOfMonth => {
+            let next = anchor_date.checked_add_months(Months::new(1))?;
+            let first_of_next = if next.month() == 12 {
+                NaiveDate::from_ymd_opt(next.year() + 1, 1, 1)
+            } else {
+                NaiveDate::from_ymd_opt(next.year(), next.month() + 1, 1)
+            };
+            first_of_next.and_then(|d| d.pred_opt())
         }
-
-        Frequency::Weekly => {
-            return anchor_date.checked_add_signed(Duration::weeks(1));
-        }
-
-        Frequency::Biweekly => {
-            return anchor_date.checked_add_signed(Duration::weeks(2));
-        }
-
-        Frequency::EveryFourthWeek => {
-            return anchor_date.checked_add_signed(Duration::weeks(4));
-        }
-
-        Frequency::Monthly => {
-            // There is no months Duration, so using Months struct from Chrono
-            return anchor_date.checked_add_months(Months::new(1));
-        }
-
-        Frequency::Bimonthly => {
-            return anchor_date.checked_add_months(Months::new(2));
-        }
-
-        Frequency::Quarterly => {
-            return anchor_date.checked_add_months(Months::new(3));
-        }
-
-        Frequency::EveryFourthMonth => {
-            return anchor_date.checked_add_months(Months::new(4));
-        }
-
-        Frequency::Semiannual => {
-            return anchor_date.checked_add_months(Months::new(6));
-        }
-
-        Frequency::Annual => {
-            let delta = 1;
-            return checked_add_years(anchor_date, delta);
-        }
-
-        Frequency::Once => {
-            return Some(*anchor_date);
-        }
+        Frequency::Bimonthly => anchor_date.checked_add_months(Months::new(2)),
+        Frequency::Quarterly => anchor_date.checked_add_months(Months::new(3)),
+        Frequency::EveryFourthMonth => anchor_date.checked_add_months(Months::new(4)),
+        Frequency::Semiannual => anchor_date.checked_add_months(Months::new(6)),
+        Frequency::Annual => checked_add_years(anchor_date, 1),
+        Frequency::Zero => None,
     }
 }
 
-/// Iterator over dates of a schedule.
-/// This is an unbounded
+/// Returns the adjusted next date after `anchor`, applying the schedule's
+/// calendar and adjustment rule, or `None` if there is no next date or the
+/// next date is out of range.
+///
+/// When successful, guarantees the result is strictly after `anchor` even when
+/// an adjustment rule would otherwise move the date backwards.
+///
+/// Returns `None` when:
+/// - The frequency has no "next" date (e.g., [`Frequency::Zero`])
+/// - The next date would be out of the representable `NaiveDate` range
+///
+/// # Examples
+///
+/// ```rust
+/// use chrono::NaiveDate;
+/// use findates::calendar::basic_calendar;
+/// use findates::conventions::{AdjustRule, Frequency};
+/// use findates::schedule::{Schedule, schedule_next_adjusted};
+///
+/// let cal    = basic_calendar();
+/// let sched  = Schedule::new(Frequency::Weekly, Some(&cal), Some(AdjustRule::Following));
+/// let anchor = NaiveDate::from_ymd_opt(2024, 3, 14).unwrap(); // Thursday
+///
+/// let next = schedule_next_adjusted(&sched, anchor).unwrap();
+/// assert_eq!(next, NaiveDate::from_ymd_opt(2024, 3, 21).unwrap());
+/// ```
+pub fn schedule_next_adjusted(schedule: &Schedule, anchor: FinDate) -> Option<FinDate> {
+    let next = schedule_next(&anchor, schedule.frequency)?;
+    force_adjust(&anchor, &next, schedule.calendar, schedule.adjust_rule)
+}
+
+/// Lazy, unbounded iterator over the dates of a [`Schedule`].
+///
+/// Created by [`Schedule::iter`].  For [`Frequency::Zero`] the iterator is
+/// immediately exhausted (returns `None` on the first call to [`next`](Iterator::next)).
+///
+/// Each step begins from the previous **adjusted** date, making this suitable
+/// for interactive "what is the next date from today?" queries.  This differs
+/// from [`Schedule::generate`], which steps from nominal (unadjusted) dates to
+/// keep fixed-term schedules anchored to their intended calendar dates.
+///
+/// # Examples
+///
+/// ```rust
+/// use chrono::NaiveDate;
+/// use findates::schedule::Schedule;
+/// use findates::conventions::Frequency;
+///
+/// let anchor = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+/// let sched  = Schedule::new(Frequency::Annual, None, None);
+/// let mut it = sched.iter(anchor);
+///
+/// assert_eq!(it.next(), NaiveDate::from_ymd_opt(2025, 1, 1));
+/// assert_eq!(it.next(), NaiveDate::from_ymd_opt(2026, 1, 1));
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScheduleIterator<'a> {
     schedule: &'a Schedule<'a>,
     anchor: FinDate,
 }
 
-impl<'a> ScheduleIterator<'a> {
-    pub fn new(schedule: &'a Schedule<'a>, anchor: FinDate) -> Self {
-        Self {
-            schedule: schedule,
-            anchor: anchor,
-        }
-    }
-}
-
 impl<'a> Iterator for ScheduleIterator<'a> {
     type Item = FinDate;
+
     fn next(&mut self) -> Option<Self::Item> {
-        let res = schedule_iterator_next(self.schedule, self.anchor);
-        self.anchor = res.expect("Next date for this schedule is out of bounds.");
-        res
+        let res = schedule_next_adjusted(self.schedule, self.anchor)?;
+        self.anchor = res;
+        Some(res)
     }
 }
 
-// Next function for the Schedule iterator
-fn schedule_iterator_next<'a>(schedule: &Schedule, anchor: FinDate) -> Option<FinDate> {
-    schedule_next(&anchor, schedule.frequency)
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-pub fn schedule_next_adjusted<'a>(schedule: &Schedule, anchor: FinDate) -> FinDate {
-    // Call next and then adjust.
-    let next = schedule_next(&anchor, schedule.frequency)
-        .expect("Next date for this schedule is out of bounds or malformed");
-    force_adjust(&anchor, &next, schedule.calendar, schedule.adjust_rule)
+    #[test]
+    fn end_of_month_schedule_next_test() {
+        let sched = Schedule::new(Frequency::EndOfMonth, None, None);
+
+        // Standard month progression (leap year Feb)
+        let d = NaiveDate::from_ymd_opt(2024, 1, 31).unwrap();
+        assert_eq!(schedule_next_adjusted(&sched, d), NaiveDate::from_ymd_opt(2024, 2, 29));
+
+        // Non-leap February
+        let d = NaiveDate::from_ymd_opt(2023, 1, 31).unwrap();
+        assert_eq!(schedule_next_adjusted(&sched, d), NaiveDate::from_ymd_opt(2023, 2, 28));
+
+        // Year boundary
+        let d = NaiveDate::from_ymd_opt(2024, 11, 30).unwrap();
+        assert_eq!(schedule_next_adjusted(&sched, d), NaiveDate::from_ymd_opt(2024, 12, 31));
+
+        // Mid-month anchor still snaps to end of next month
+        let d = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+        assert_eq!(schedule_next_adjusted(&sched, d), NaiveDate::from_ymd_opt(2024, 2, 29));
+    }
 }

@@ -85,3 +85,56 @@ fn bus_days_between_test() {
 
     assert_eq!(test_schedule.len() as u64, res);
 }
+
+// ============================================================================
+// Edge Case Tests
+// ============================================================================
+
+#[test]
+fn bus_day_schedule_single_day_test() {
+    // start == end: the schedule should contain exactly that one business day.
+    let cal = calendar::basic_calendar();
+    let monday = NaiveDate::from_ymd_opt(2024, 3, 18).unwrap();
+    let result = algebra::bus_day_schedule(&monday, &monday, &cal, None);
+    assert_eq!(result, vec![monday]);
+}
+
+#[test]
+fn business_days_between_same_day_test() {
+    let cal = calendar::basic_calendar();
+    let monday = NaiveDate::from_ymd_opt(2024, 3, 18).unwrap();
+    // Same day: zero business days between (end excluded).
+    assert_eq!(
+        algebra::business_days_between(&monday, &monday, &cal, None),
+        0
+    );
+}
+
+#[test]
+fn bus_day_schedule_holiday_gap_test() {
+    // A week with Christmas (Wednesday) and Boxing Day (Thursday) as holidays.
+    let mut cal = calendar::basic_calendar();
+    let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
+    let boxing_day = NaiveDate::from_ymd_opt(2024, 12, 26).unwrap();
+    cal.add_holidays(&[xmas, boxing_day].into_iter().collect());
+
+    let start = NaiveDate::from_ymd_opt(2024, 12, 23).unwrap(); // Monday
+    let end = NaiveDate::from_ymd_opt(2024, 12, 27).unwrap(); // Friday
+    let days = algebra::bus_day_schedule(&start, &end, &cal, None);
+    // Mon 23, Tue 24, Fri 27 — Wed/Thu are holidays
+    assert_eq!(
+        days,
+        vec![
+            NaiveDate::from_ymd_opt(2024, 12, 23).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 12, 24).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 12, 27).unwrap(),
+        ]
+    );
+}
+
+#[test]
+fn calendar_default_is_empty_test() {
+    let cal = calendar::Calendar::default();
+    assert!(cal.get_holidays().is_empty());
+    assert!(cal.get_weekend().is_empty());
+}

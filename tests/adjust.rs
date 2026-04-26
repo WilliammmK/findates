@@ -4,6 +4,7 @@
 
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 use findates::algebra;
+use findates::calendar;
 use findates::conventions::AdjustRule;
 
 mod setup;
@@ -210,4 +211,47 @@ fn adjust_unadjusted_test() {
         ),
         NaiveDate::from_ymd_opt(2023, 12, 24).unwrap()
     );
+}
+
+// ============================================================================
+// Year Arithmetic Tests
+// ============================================================================
+
+#[test]
+fn checked_add_years_forward_test() {
+    let d = NaiveDate::from_ymd_opt(2023, 8, 15).unwrap();
+    assert_eq!(
+        algebra::checked_add_years(&d, 1),
+        NaiveDate::from_ymd_opt(2024, 8, 15)
+    );
+    assert_eq!(
+        algebra::checked_add_years(&d, 10),
+        NaiveDate::from_ymd_opt(2033, 8, 15)
+    );
+}
+
+#[test]
+fn checked_add_years_backward_test() {
+    let d = NaiveDate::from_ymd_opt(2023, 8, 15).unwrap();
+    assert_eq!(
+        algebra::checked_add_years(&d, -1),
+        NaiveDate::from_ymd_opt(2022, 8, 15)
+    );
+}
+
+#[test]
+fn checked_add_years_feb29_leap_to_nonleap_test() {
+    // Feb 29 in a leap year cannot be added to a non-leap year.
+    let leap_day = NaiveDate::from_ymd_opt(2024, 2, 29).unwrap();
+    assert!(algebra::checked_add_years(&leap_day, 1).is_none()); // 2025 is not a leap year
+    assert!(algebra::checked_add_years(&leap_day, 4).is_some()); // 2028 is a leap year
+}
+
+#[test]
+fn adjust_unadjusted_holiday_unchanged_test() {
+    let mut cal = calendar::basic_calendar();
+    let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
+    cal.add_holidays(&[xmas].into_iter().collect());
+    let result = algebra::adjust(&xmas, Some(&cal), Some(AdjustRule::Unadjusted));
+    assert_eq!(result, xmas);
 }
