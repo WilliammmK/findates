@@ -43,7 +43,7 @@
 //! // Act/365 over 365 days = exactly 1.0
 //! let dcf = algebra::day_count_fraction(
 //!     &anchor, &end, DayCount::Act365, None, None,
-//! );
+//! ).unwrap();
 //! assert!((dcf - 1.0).abs() < 1e-9);
 //! ```
 
@@ -51,7 +51,10 @@ pub mod algebra;
 pub mod calendar;
 pub mod conventions;
 pub mod date;
+pub mod error;
 pub mod schedule;
+
+pub use error::DayCountError;
 
 /// Type alias for the date type used throughout the library.
 pub type FinDate = chrono::NaiveDate;

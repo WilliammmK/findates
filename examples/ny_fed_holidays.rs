@@ -293,7 +293,7 @@ fn main() {
             DayCount::D30360Euro,
             None,
             None,
-        );
+        ).unwrap();
         dcfs.push(dcf);
     }
 

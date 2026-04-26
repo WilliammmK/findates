@@ -6,6 +6,7 @@ use chrono::NaiveDate;
 use findates::algebra::day_count_fraction;
 use findates::calendar;
 use findates::conventions::{AdjustRule, DayCount};
+use findates::DayCountError;
 use std::collections::HashSet;
 
 fn round_decimals(x: f64) -> f64 {
@@ -35,7 +36,7 @@ fn dcf_act360_test() {
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
     let expected: f64 = 0.6305556;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::Act360, None, None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::Act360, None, None).unwrap();
     // No calendar
     assert_eq!(round_decimals(res), round_decimals(expected));
     // With Calendar
@@ -48,7 +49,7 @@ fn dcf_act360_test() {
         DayCount::Act360,
         Some(&cal),
         Some(AdjustRule::Following),
-    );
+    ).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 }
 
@@ -59,7 +60,7 @@ fn dcf_act365_test() {
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
     let expected: f64 = 0.62191781;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::Act365, None, None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::Act365, None, None).unwrap();
     // No calendar
     assert_eq!(round_decimals(res), round_decimals(expected));
     // With Calendar
@@ -72,7 +73,7 @@ fn dcf_act365_test() {
         DayCount::Act365,
         Some(&cal),
         Some(AdjustRule::Following),
-    );
+    ).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 }
 
@@ -87,28 +88,28 @@ fn dcf_actactisda_test() {
     let start: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 5, 27).unwrap(); // This is a Monday within a Leap year
     let expected: f64 = 0.27868852;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 
     // Both dates within a non-leap year
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 5, 27).unwrap(); // This will get adjusted to 29May2023
     let expected: f64 = 0.28219178;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 
     // End date only within a leap year
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 5, 27).unwrap(); // This is a Monday in a Leap Year
     let expected: f64 = 1.27835167;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 
     // Start date and end dates within a leap year
     let start: NaiveDate = NaiveDate::from_ymd_opt(2020, 2, 29).unwrap(); // This is a Saturday, will get adjusted to 2nd of March
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 5, 27).unwrap(); // This is a Monday in a Leap Year
     let expected: f64 = 4.23497268;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::ActActISDA, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 }
 
@@ -120,18 +121,18 @@ fn dcf_d30360euro_test() {
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 31).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); // This is a Monday within a Leap year
     let expected: f64 = 1.04166667;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::D30360Euro, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::D30360Euro, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
     // End date on the 31st
     let start: NaiveDate = NaiveDate::from_ymd_opt(2024, 3, 31).unwrap(); // Although this is a 31st, it is a Sunday so will get adjusted to Following first,
                                                                           // since we are passing a calendar.
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 10, 31).unwrap();
     let expected: f64 = 0.5805556;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::D30360Euro, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::D30360Euro, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
     // Same dates but passing no calendar, i.e. no adjustment:
     let expected: f64 = 0.583333;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::D30360Euro, None, None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::D30360Euro, None, None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 }
 
@@ -142,7 +143,7 @@ fn dcf_d30365_test() {
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 24).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap(); // This is a Monday within a Leap year
     let expected: f64 = 1.04383562;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::D30365, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::D30365, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
 }
 
@@ -156,14 +157,14 @@ fn dcf_bd252_test() {
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 24).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap();
     let expected: f64 = 1.09126984;
-    let res: f64 = day_count_fraction(&start, &end, DayCount::Bd252, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::Bd252, Some(&cal), None).unwrap();
     assert_eq!(round_decimals(res), round_decimals(expected));
     // Test case with an adjustment on the end date
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 24).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 23).unwrap(); // This will get adjusted to the 27th of Dec
     let end2: NaiveDate = NaiveDate::from_ymd_opt(2023, 12, 27).unwrap(); // This is a business day so won't be adjusted
-    let res: f64 = day_count_fraction(&start, &end, DayCount::Bd252, Some(&cal), None);
-    let res2: f64 = day_count_fraction(&start, &end2, DayCount::Bd252, Some(&cal), None);
+    let res: f64 = day_count_fraction(&start, &end, DayCount::Bd252, Some(&cal), None).unwrap();
+    let res2: f64 = day_count_fraction(&start, &end2, DayCount::Bd252, Some(&cal), None).unwrap();
     // Business day count for both end dates above should be the same
     assert_eq!(round_decimals(res), round_decimals(res2));
     // But if we pass a Preceding adjustment they should differ
@@ -173,24 +174,52 @@ fn dcf_bd252_test() {
         DayCount::Bd252,
         Some(&cal),
         Some(AdjustRule::Preceding),
-    );
+    ).unwrap();
     let res2: f64 = day_count_fraction(
         &start,
         &end2,
         DayCount::Bd252,
         Some(&cal),
         Some(AdjustRule::Preceding),
-    );
+    ).unwrap();
     assert_ne!(round_decimals(res), round_decimals(res2));
     let expected: f64 = 0.94444444;
     assert_eq!(round_decimals(res), round_decimals(expected));
 }
 
 #[test]
-#[should_panic]
-fn dcf_bd252_panic_test() {
-    // A panic should occur since Bd252 is passed without a calendar
+fn dcf_bd252_no_calendar_returns_err_test() {
     let start: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 24).unwrap();
     let end: NaiveDate = NaiveDate::from_ymd_opt(2024, 2, 15).unwrap();
-    let _res: f64 = day_count_fraction(&start, &end, DayCount::Bd252, None, None);
+    assert_eq!(
+        day_count_fraction(&start, &end, DayCount::Bd252, None, None),
+        Err(DayCountError::MissingCalendar),
+    );
+}
+
+#[test]
+fn dcf_bd252_with_calendar_returns_ok_test() {
+    let cal = calendar::basic_calendar();
+    let start = NaiveDate::from_ymd_opt(2024, 3, 18).unwrap();
+    let end = NaiveDate::from_ymd_opt(2024, 3, 22).unwrap();
+    assert!(day_count_fraction(&start, &end, DayCount::Bd252, Some(&cal), None).is_ok());
+}
+
+#[test]
+fn dcf_non_bd252_conventions_return_ok_without_calendar_test() {
+    let start = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+
+    for dc in [
+        DayCount::Act360,
+        DayCount::Act365,
+        DayCount::ActActISDA,
+        DayCount::D30360Euro,
+        DayCount::D30365,
+    ] {
+        assert!(
+            day_count_fraction(&start, &end, dc, None, None).is_ok(),
+            "{dc} should return Ok without a calendar",
+        );
+    }
 }

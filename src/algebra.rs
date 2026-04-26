@@ -7,6 +7,7 @@
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, DayCount};
 use crate::date::DateLike;
+use crate::error::DayCountError;
 use chrono::{Days, NaiveDate};
 
 /// Returns `true` if `date` is a good business day in `calendar`.
@@ -226,9 +227,10 @@ pub fn business_days_between(
 /// If `end_date` is before `start_date` the fraction is computed on the
 /// absolute time difference.
 ///
-/// # Panics
+/// # Errors
 ///
-/// Panics if `daycount` is [`Bd252`](DayCount::Bd252) and `calendar` is `None`.
+/// Returns [`Err(DayCountError::MissingCalendar)`](DayCountError::MissingCalendar)
+/// if `daycount` is [`Bd252`](DayCount::Bd252) and `calendar` is `None`.
 ///
 /// # Examples
 ///
@@ -242,11 +244,11 @@ pub fn business_days_between(
 /// let end   = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
 ///
 /// // Act/365 over a full non-leap year = exactly 1.0
-/// let dcf = day_count_fraction(&start, &end, DayCount::Act365, None, None);
+/// let dcf = day_count_fraction(&start, &end, DayCount::Act365, None, None).unwrap();
 /// assert!((dcf - 1.0).abs() < 1e-9);
 ///
 /// // Act/360 over 365 days
-/// let dcf360 = day_count_fraction(&start, &end, DayCount::Act360, None, None);
+/// let dcf360 = day_count_fraction(&start, &end, DayCount::Act360, None, None).unwrap();
 /// assert!((dcf360 - 365.0 / 360.0).abs() < 1e-9);
 /// ```
 pub fn day_count_fraction(
@@ -255,7 +257,7 @@ pub fn day_count_fraction(
     daycount: DayCount,
     calendar: Option<&Calendar>,
     adjust_rule: Option<AdjustRule>,
-) -> f64 {
+) -> Result<f64, DayCountError> {
     let (start_adjusted, end_adjusted, some_adjust_rule, delta) = if calendar.is_none() {
         (
             *start_date,
@@ -283,19 +285,19 @@ pub fn day_count_fraction(
     let mut end_day: i32 = end_adjusted.day() as i32;
 
     match daycount {
-        DayCount::Act360 => delta as f64 / 360.0,
+        DayCount::Act360 => Ok(delta as f64 / 360.0),
 
-        DayCount::Act365 => delta as f64 / 365.0,
+        DayCount::Act365 => Ok(delta as f64 / 365.0),
 
         DayCount::ActActISDA => {
             if start_adjusted == end_adjusted {
-                return 0.0;
+                return Ok(0.0);
             }
             if start_year == end_year && is_leap_year(start_year) {
-                return delta as f64 / 366.0;
+                return Ok(delta as f64 / 366.0);
             }
             if start_year == end_year {
-                return delta as f64 / 365.0;
+                return Ok(delta as f64 / 365.0);
             }
             if start_adjusted > end_adjusted {
                 return day_count_fraction(
@@ -315,8 +317,7 @@ pub fn day_count_fraction(
             let dcf2 = (end_adjusted
                 - NaiveDate::from_ymd_opt(end_year, 1, 1).unwrap()).num_days() as f64
                 / base2 as f64;
-            dcf + dcf1 + dcf2
-
+            Ok(dcf + dcf1 + dcf2)
         }
 
         DayCount::D30360Euro => {
@@ -325,26 +326,24 @@ pub fn day_count_fraction(
             let res = 360 * (end_year - start_year)
                 + 30 * (end_month - start_month)
                 + (end_day - start_day);
-            res as f64 / 360.0
+            Ok(res as f64 / 360.0)
         }
 
         DayCount::D30365 => {
             let res = 360.0 * (end_year - start_year) as f64
                 + 30.0 * (end_month - start_month) as f64
                 + (end_day - start_day) as f64;
-            res / 365.0
+            Ok(res / 365.0)
         }
 
         DayCount::Bd252 => {
-            if calendar.is_none() {
-                panic!("Bd252 day count requires a Calendar input");
-            }
-            business_days_between(
+            let cal = calendar.ok_or(DayCountError::MissingCalendar)?;
+            Ok(business_days_between(
                 &start_adjusted,
                 &end_adjusted,
-                calendar.unwrap(),
+                cal,
                 some_adjust_rule,
-            ) as f64 / 252.0
+            ) as f64 / 252.0)
         }
     }
 }
