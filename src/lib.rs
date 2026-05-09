@@ -15,6 +15,18 @@
 //! - [`algebra`] — core functions: business day checks, adjustment, day count fractions, schedule counting
 //! - [`schedule`] — [`Schedule`](schedule::Schedule) and lazy [`ScheduleIterator`](schedule::ScheduleIterator)
 //! - [`date`] — [`DateLike`](date::DateLike) trait implemented for [`NaiveDate`](chrono::NaiveDate)
+//! - [`error`] — [`DayCountError`](error::DayCountError) returned by fallible functions
+//!
+//! ## Features
+//!
+//! - **`serde`** *(optional)* — derives `Serialize` and `Deserialize` for
+//!   [`DayCount`](conventions::DayCount), [`AdjustRule`](conventions::AdjustRule),
+//!   [`Frequency`](conventions::Frequency), and [`Calendar`](calendar::Calendar).
+//!   Enable in `Cargo.toml`:
+//!   ```toml
+//!   [dependencies]
+//!   findates = { version = "0.1", features = ["serde"] }
+//!   ```
 //!
 //! ## Quick start
 //!

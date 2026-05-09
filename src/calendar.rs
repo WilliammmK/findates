@@ -78,6 +78,8 @@ pub fn basic_calendar() -> Calendar {
 
 /// Returns the union of a slice of calendars: a date is non-working if it is
 /// non-working in *any* of the input calendars.
+/// If `calendars` is empty, returns an empty calendar with no weekend
+/// days and no holidays — equivalent to [`Calendar::new`].
 ///
 /// # Examples
 ///
@@ -159,6 +161,8 @@ impl Calendar {
 
     /// Adds dates to the holiday set (union with existing holidays).
     ///
+    /// Accepts a `&HashSet<NaiveDate>`. To add dates from a `Vec` or other
+    /// iterator, collect into a `HashSet` first:
     /// # Examples
     ///
     /// ```rust
@@ -216,7 +220,7 @@ impl Calendar {
     /// ```
     pub fn union(&mut self, other: &Calendar) {
         self.holidays = self.holidays.union(&other.holidays).cloned().collect();
-        self.weekend  = self.weekend.union(&other.weekend).cloned().collect();
+        self.weekend = self.weekend.union(&other.weekend).cloned().collect();
     }
 
     /// Returns `true` if `date` is a good business day in this calendar.
@@ -267,22 +271,26 @@ impl Calendar {
     /// assert!(!cal1.get_holidays().contains(&boxing));
     /// ```
     pub fn intersection(&mut self, other: &Calendar) {
-        self.holidays = self.holidays.intersection(&other.holidays).cloned().collect();
-        self.weekend  = self.weekend.intersection(&other.weekend).cloned().collect();
+        self.holidays = self
+            .holidays
+            .intersection(&other.holidays)
+            .cloned()
+            .collect();
+        self.weekend = self.weekend.intersection(&other.weekend).cloned().collect();
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
     use crate::calendar::{self as c, Calendar};
     use chrono::{NaiveDate, Weekday};
+    use std::collections::HashSet;
 
     #[test]
     fn add_holidays_test() {
         let mut cal = c::basic_calendar();
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
-        let boxing_day    = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
         let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
         cal.add_holidays(&new_holidays);
         assert_eq!(cal.holidays, new_holidays);
@@ -300,7 +308,7 @@ mod tests {
     fn get_holidays_test() {
         let mut cal = c::basic_calendar();
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
-        let boxing_day    = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
         let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
         cal.add_holidays(&new_holidays);
         assert_eq!(cal.get_holidays(), &new_holidays);
@@ -317,7 +325,7 @@ mod tests {
     #[test]
     fn calendar_union_test() {
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
-        let boxing_day    = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
 
         let mut cal1 = Calendar::new();
         cal1.add_weekends(&[Weekday::Sat].into_iter().collect());
@@ -337,7 +345,7 @@ mod tests {
     #[test]
     fn calendar_intersection_test() {
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
-        let boxing_day    = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
 
         let mut cal1 = Calendar::new();
         cal1.add_weekends(&[Weekday::Sun].into_iter().collect());

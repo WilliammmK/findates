@@ -1,3 +1,9 @@
+//! Error types returned by fallible findates functions.
+//!
+//! Currently contains [`DayCountError`], returned by
+//! [`algebra::day_count_fraction`](crate::algebra::day_count_fraction)
+//! when called with an incompatible combination of arguments.
+
 use std::fmt;
 
 /// Errors returned by day count fraction calculations.

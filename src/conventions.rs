@@ -26,16 +26,22 @@ use std::str::FromStr;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DayCount {
     /// Actual days divided by 360.
+    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
     Act360,
+
     /// Actual days divided by 365.
+    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
     Act365,
     /// Business days divided by 252 (Brazilian convention). Requires a [`Calendar`](crate::calendar::Calendar).
     Bd252,
     /// Actual/Actual ISDA: accounts for leap years by splitting the period at year boundaries.
+    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
     ActActISDA,
     /// 30/360 European: days of 30, months of 30, year of 360.
+    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
     D30360Euro,
     /// 30/365: days of 30, months of 30, year of 365.
+    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
     D30365,
 }
 
@@ -200,11 +206,10 @@ impl FromStr for AdjustRule {
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Frequency {
-    /// Zero coupon (single payment at maturity). For [`Schedule::generate`],
-    /// this returns just the end date. The iterator yields no elements after
-    /// the anchor.
-    ///
-    /// [`Schedule::generate`]: crate::schedule::Schedule::generate
+    /// Zero coupon (single payment at maturity). For
+    /// [`Schedule::generate`](crate::schedule::Schedule::generate),
+    /// this returns just the end date. The iterator yields no elements
+    /// after the anchor.
     Zero,
     /// Once a year.
     Annual,
@@ -219,6 +224,9 @@ pub enum Frequency {
     /// Once a month.
     Monthly,
     /// Every month, always landing on the last calendar day of the month.
+    /// When a [`Calendar`](crate::calendar::Calendar) and
+    /// [`AdjustRule`](crate::conventions::AdjustRule) are provided, the
+    /// last calendar day is further adjusted to the nearest business day.
     EndOfMonth,
     /// Every four weeks.
     EveryFourthWeek,
