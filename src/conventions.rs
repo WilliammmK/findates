@@ -26,22 +26,38 @@ use std::str::FromStr;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DayCount {
     /// Actual days divided by 360.
-    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
+    ///
+    /// QuantLib equivalent: `Actual360`
     Act360,
 
     /// Actual days divided by 365.
-    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
+    ///
+    /// QuantLib equivalent: `Actual365Fixed` (Standard variant)
     Act365,
-    /// Business days divided by 252 (Brazilian convention). Requires a [`Calendar`](crate::calendar::Calendar).
+
+    /// Business days divided by 252 (Brazilian convention).
+    /// Requires a [`Calendar`](crate::calendar::Calendar).
+    ///
+    /// QuantLib equivalent: `Business252`
     Bd252,
-    /// Actual/Actual ISDA: accounts for leap years by splitting the period at year boundaries.
-    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
+
+    /// Actual/Actual ISDA: accounts for leap years by splitting
+    /// the period at year boundaries.
+    ///
+    /// QuantLib equivalent: `ActualActual(ActualActual::ISDA)`
     ActActISDA,
-    /// 30/360 European: days of 30, months of 30, year of 360.
-    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
+
+    /// 30/360 European: if either date falls on the 31st of a month
+    /// it is treated as the 30th. Year of 360 days.
+    ///
+    /// QuantLib equivalent: `Thirty360(Thirty360::European)` /
+    /// `Thirty360(Thirty360::EurobondBasis)`
     D30360Euro,
-    /// 30/365: days of 30, months of 30, year of 365.
-    /// See [`algebra::day_count_fraction`](crate::algebra::day_count_fraction).
+
+    /// 30/365: months of 30 days, year of 365 days.
+    ///
+    /// QuantLib equivalent: no direct equivalent — closest is
+    /// `Thirty360` with custom year basis
     D30365,
 }
 
