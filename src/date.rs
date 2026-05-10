@@ -1,13 +1,24 @@
 //! Trait for date-like types used by the library's core functions.
+//!
+//! [`DateLike`] is implemented for [`chrono::NaiveDate`] out of the box,
+//! which is the type used throughout findates via the [`FinDate`](crate::FinDate)
+//! alias.
+//!
+//! Implement this trait for your own date type if your codebase uses a
+//! different date representation and you want to call
+//! [`algebra::is_business_day`](crate::algebra::is_business_day) without
+//! converting through `NaiveDate` at every call site.  All other algebra
+//! functions operate on `NaiveDate` directly.
 
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 
-/// Minimal interface over calendar dates required by [`is_business_day`](crate::algebra::is_business_day).
+/// Minimal interface over calendar dates required by
+/// [`is_business_day`](crate::algebra::is_business_day).
 ///
-/// Implemented for [`NaiveDate`] out of the box. Implement it for your own date
-/// type if you need to integrate with the library's algebra without converting
-/// through `NaiveDate`.
-pub trait DateLike: Copy + Ord {
+/// Implemented for [`NaiveDate`] out of the box.  Implement it for your own
+/// date type if you need to integrate with the library's algebra without
+/// converting through `NaiveDate`.
+pub(crate) trait DateLike: Copy + Ord {
     /// Gregorian year (e.g. `2024`).
     fn year(&self) -> i32;
 
@@ -32,62 +43,26 @@ pub trait DateLike: Copy + Ord {
 }
 
 impl DateLike for NaiveDate {
-    /// ```
-    /// use chrono::NaiveDate;
-    /// use findates::date::DateLike;
-    /// let d = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
-    /// assert_eq!(d.year(), 2024);
-    /// ```
     fn year(&self) -> i32 {
         Datelike::year(self)
     }
 
-    /// ```
-    /// use chrono::NaiveDate;
-    /// use findates::date::DateLike;
-    /// let d = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
-    /// assert_eq!(d.month(), 3);
-    /// ```
     fn month(&self) -> u32 {
         Datelike::month(self)
     }
 
-    /// ```
-    /// use chrono::NaiveDate;
-    /// use findates::date::DateLike;
-    /// let d = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
-    /// assert_eq!(d.day(), 15);
-    /// ```
     fn day(&self) -> u32 {
         Datelike::day(self)
     }
 
-    /// ```
-    /// use chrono::{NaiveDate, Weekday};
-    /// use findates::date::DateLike;
-    /// let d = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap(); // Friday
-    /// assert_eq!(d.weekday(), Weekday::Fri);
-    /// ```
     fn weekday(&self) -> Weekday {
         Datelike::weekday(self)
     }
 
-    /// ```
-    /// use chrono::NaiveDate;
-    /// use findates::date::DateLike;
-    /// let d = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
-    /// assert_eq!(d.add_days(1), NaiveDate::from_ymd_opt(2024, 3, 16));
-    /// ```
     fn add_days(&self, days: u64) -> Option<Self> {
         self.checked_add_days(Days::new(days))
     }
 
-    /// ```
-    /// use chrono::NaiveDate;
-    /// use findates::date::DateLike;
-    /// let d = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
-    /// assert_eq!(d.sub_days(1), NaiveDate::from_ymd_opt(2024, 3, 14));
-    /// ```
     fn sub_days(&self, days: u64) -> Option<Self> {
         self.checked_sub_days(Days::new(days))
     }

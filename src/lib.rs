@@ -14,8 +14,7 @@
 //! - [`conventions`] — [`DayCount`](conventions::DayCount), [`AdjustRule`](conventions::AdjustRule), [`Frequency`](conventions::Frequency) enums
 //! - [`algebra`] — core functions: business day checks, adjustment, day count fractions, schedule counting
 //! - [`schedule`] — [`Schedule`](schedule::Schedule) and lazy [`ScheduleIterator`](schedule::ScheduleIterator)
-//! - [`date`] — [`DateLike`](date::DateLike) trait implemented for [`NaiveDate`](chrono::NaiveDate)
-//! - [`error`] — [`DayCountError`](error::DayCountError) returned by fallible functions
+//! - [`error`] — [`DayCountError`] returned by fallible functions
 //!
 //! ## Features
 //!
@@ -27,6 +26,18 @@
 //!   [dependencies]
 //!   findates = { version = "0.1", features = ["serde"] }
 //!   ```
+//!
+//! ## Date Types
+//!
+//! findates uses [`chrono::NaiveDate`] as its date representation throughout.
+//! All public functions accept and return `NaiveDate` (aliased as
+//! [`FinDate`] for convenience).  Timezone-aware dates are not supported —
+//! financial date arithmetic operates on calendar dates without reference
+//! to time of day or timezone.
+//!
+//! If your codebase uses the [`time`](https://docs.rs/time) crate, you will
+//! need to convert to `NaiveDate` at the boundary.  Broader date type
+//! interoperability is planned for a future release.
 //!
 //! ## Quick start
 //!
@@ -62,7 +73,7 @@
 pub mod algebra;
 pub mod calendar;
 pub mod conventions;
-pub mod date;
+pub(crate) mod date;
 pub mod error;
 pub mod schedule;
 

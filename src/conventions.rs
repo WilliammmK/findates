@@ -225,7 +225,7 @@ pub enum Frequency {
     Monthly,
     /// Every month, always landing on the last calendar day of the month.
     /// When a [`Calendar`](crate::calendar::Calendar) and
-    /// [`AdjustRule`](crate::conventions::AdjustRule) are provided, the
+    /// [`AdjustRule`] are provided, the
     /// last calendar day is further adjusted to the nearest business day.
     EndOfMonth,
     /// Every four weeks.

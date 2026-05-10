@@ -6,9 +6,8 @@
 
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, DayCount};
-use crate::date::DateLike;
 use crate::error::DayCountError;
-use chrono::{Days, NaiveDate};
+use chrono::{Datelike, Days, NaiveDate};
 
 /// Returns `true` if `date` is a good business day in `calendar`.
 ///
@@ -28,22 +27,26 @@ use chrono::{Days, NaiveDate};
 /// assert!(is_business_day(&monday, &cal));
 /// assert!(!is_business_day(&saturday, &cal));
 /// ```
-pub fn is_business_day(date: &impl DateLike, calendar: &Calendar) -> bool {
+pub fn is_business_day(date: &NaiveDate, calendar: &Calendar) -> bool {
     if calendar.get_weekend().contains(&date.weekday()) {
         return false;
     }
-    !calendar
-        .get_holidays()
-        .contains(&NaiveDate::from_ymd_opt(date.year(), date.month(), date.day()).unwrap())
+    !calendar.get_holidays().contains(date)
 }
 
 /// Adjusts `date` to a business day according to `calendar` and `adjust_rule`.
 ///
-/// - If `opt_calendar` is `None`, the date is returned unchanged regardless of
-///   `adjust_rule`.
-/// - If the date is already a business day, it is returned unchanged.
-/// - If `adjust_rule` is `None` (with a calendar present), the date is also
-///   returned unchanged.
+/// Behaviour by argument combination:
+///
+/// | `opt_calendar` | `adjust_rule`          | Result                          |
+/// |----------------|------------------------|---------------------------------|
+/// | `None`         | any                    | `date` unchanged                |
+/// | `Some(_)`      | `None`                 | `date` unchanged                |
+/// | `Some(_)`      | `Some(Unadjusted)`     | `date` unchanged                |
+/// | `Some(_)`      | `Some(_)` (other)      | adjusted to nearest business day|
+///
+/// If `date` is already a business day it is returned unchanged regardless
+/// of the rule.
 ///
 /// # Examples
 ///
@@ -135,10 +138,15 @@ fn sub_adjust(date: &NaiveDate, calendar: &Calendar) -> NaiveDate {
     }
 }
 
-/// Generates a sorted vector of every business day from `start_date` to `end_date` inclusive.
+/// Generates a sorted vector of every business day from `start_date` to
+/// `end_date` inclusive.
 ///
 /// Both endpoints are first adjusted to business days using `adjust_rule`
 /// (defaults to [`Following`](AdjustRule::Following) when `None`).
+///
+/// Consecutive non-business days (e.g. a long holiday period) are handled
+/// correctly — the function always steps to the next business day regardless
+/// of how many non-working days lie between two valid dates.
 ///
 /// # Examples
 ///
@@ -189,11 +197,13 @@ pub fn bus_day_schedule(
     schedule
 }
 
-/// Counts the number of business days from `start_date` up to but not including `end_date`.
+/// Counts the number of business days from `start_date` up to but not
+/// including `end_date`.
 ///
 /// This follows the common financial convention of including the start date
 /// and excluding the end date.  Both endpoints are adjusted as in
-/// [`bus_day_schedule`].
+/// [`bus_day_schedule`].  The result is equivalent to
+/// `bus_day_schedule(...).len() - 1`.
 ///
 /// # Examples
 ///
@@ -220,9 +230,11 @@ pub fn business_days_between(
 
 /// Computes the day count fraction between two dates using the given convention.
 ///
-/// If `calendar` is `None`, no date adjustment is performed.  If `calendar` is
-/// provided and `adjust_rule` is `None`, the rule defaults to
-/// [`Following`](AdjustRule::Following).
+/// If `calendar` is `None`, no date adjustment is performed.  If `calendar`
+/// is provided and `adjust_rule` is `None`, the adjustment rule defaults to
+/// [`Following`](AdjustRule::Following) before computing the fraction.
+/// To suppress adjustment while still providing a calendar (e.g. for
+/// [`Bd252`](DayCount::Bd252)), pass `Some(AdjustRule::Unadjusted)`.
 ///
 /// If `end_date` is before `start_date` the fraction is computed on the
 /// absolute time difference.

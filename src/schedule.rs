@@ -2,8 +2,13 @@
 //!
 //! A [`Schedule`] pairs a [`Frequency`] with an optional [`Calendar`] and
 //! [`AdjustRule`].  Calling [`Schedule::iter`] returns an unbounded lazy
-//! iterator; calling [`Schedule::generate`] collects dates up to a given
-//! end date into a `Vec`.
+//! iterator that steps from the previous **adjusted** date — suitable for
+//! interactive "next date from today" queries.  Calling [`Schedule::generate`]
+//! collects dates up to a given end date into a `Vec`, stepping from
+//! **nominal** dates to preserve schedule integrity for fixed-term instruments.
+//!
+//! For single-step interactive use, [`schedule_next_adjusted`] is also
+//! available as a public function.
 
 use crate::FinDate;
 use chrono::{Datelike, Days, Months, NaiveDate};
@@ -181,9 +186,13 @@ impl<'a> Schedule<'a> {
     }
 }
 
-// When Preceding/ModFollowing/Nearest adjustments could return a date ≤ anchor,
-// keep stepping forward until the adjusted result is strictly after anchor.
-// Returns None if the search walks off the end of the representable date range.
+// Guarantees the adjusted result is strictly after `anchor_date`.
+//
+// Some adjustment rules (Preceding, ModFollowing, Nearest) can move a date
+// backwards past the anchor. When that happens this function keeps nudging
+// the candidate forward by one calendar day at a time until the adjusted
+// result clears the anchor. Returns None if the search walks off the end of
+// the representable NaiveDate range.
 fn force_adjust(
     anchor_date: &FinDate,
     next_date: &FinDate,
@@ -260,13 +269,15 @@ pub fn schedule_next_adjusted(schedule: &Schedule, anchor: FinDate) -> Option<Fi
 
 /// Lazy, unbounded iterator over the dates of a [`Schedule`].
 ///
-/// Created by [`Schedule::iter`].  For [`Frequency::Zero`] the iterator is
-/// immediately exhausted (returns `None` on the first call to [`next`](Iterator::next)).
+/// Created by [`Schedule::iter`] — do not construct directly.
+/// For [`Frequency::Zero`] the iterator is immediately exhausted
+/// (returns `None` on the first call to [`next`](Iterator::next)).
 ///
-/// Each step begins from the previous **adjusted** date, making this suitable
-/// for interactive "what is the next date from today?" queries.  This differs
-/// from [`Schedule::generate`], which steps from nominal (unadjusted) dates to
-/// keep fixed-term schedules anchored to their intended calendar dates.
+/// Each step begins from the previous **adjusted** date, making this
+/// suitable for interactive "what is the next date from today?" queries.
+/// This differs from [`Schedule::generate`], which steps from nominal
+/// (unadjusted) dates to keep fixed-term schedules anchored to their
+/// intended calendar dates.
 ///
 /// # Examples
 ///

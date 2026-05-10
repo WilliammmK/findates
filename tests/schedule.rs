@@ -530,17 +530,3 @@ fn end_of_month_weekend_adjustment_test() {
 }
 
 // ============================================================================
-// DateLike Tests
-// ============================================================================
-
-#[test]
-fn datelike_naive_date_test() {
-    use findates::date::DateLike;
-    let d = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
-    // Use the custom DateLike trait methods
-    assert_eq!(DateLike::year(&d), 2024);
-    assert_eq!(DateLike::month(&d), 6);
-    assert_eq!(DateLike::day(&d), 15);
-    assert_eq!(d.add_days(1), NaiveDate::from_ymd_opt(2024, 6, 16));
-    assert_eq!(d.sub_days(1), NaiveDate::from_ymd_opt(2024, 6, 14));
-}

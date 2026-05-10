@@ -9,6 +9,7 @@ repository = "https://github.com/kobaraguilherme/findates"
 documentation = "https://docs.rs/findates"
 keywords = ["finance", "dates", "calendar", "daycount", "schedule"]
 categories = ["date-and-time", "mathematics"]
+exclude = [".github", ".DS_Store"]
 
 [dependencies]
 chrono = "0.4"
