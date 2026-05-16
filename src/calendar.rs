@@ -24,15 +24,13 @@ use std::collections::HashSet;
 /// # Examples
 ///
 /// ```rust
-/// use std::collections::HashSet;
 /// use chrono::{NaiveDate, Weekday};
 /// use findates::calendar::Calendar;
 ///
-/// let mut cal = Calendar::new();
-/// cal.add_weekends(&[Weekday::Sat, Weekday::Sun].into_iter().collect());
+/// let mut cal = Calendar::with_weekends([Weekday::Sat, Weekday::Sun]);
 ///
 /// let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
-/// cal.add_holidays(&[xmas].into_iter().collect());
+/// cal.add_holidays([xmas]);
 ///
 /// assert!(cal.get_holidays().contains(&xmas));
 /// ```
@@ -84,16 +82,13 @@ pub fn basic_calendar() -> Calendar {
 /// # Examples
 ///
 /// ```rust
-/// use std::collections::HashSet;
 /// use chrono::{NaiveDate, Weekday};
 /// use findates::calendar::{Calendar, calendar_unions};
 ///
-/// let mut uk = Calendar::new();
-/// uk.add_weekends(&[Weekday::Sat, Weekday::Sun].into_iter().collect());
+/// let uk = Calendar::with_weekends([Weekday::Sat, Weekday::Sun]);
 ///
-/// let mut us = Calendar::new();
 /// let thanksgiving = NaiveDate::from_ymd_opt(2024, 11, 28).unwrap();
-/// us.add_holidays(&[thanksgiving].into_iter().collect());
+/// let us = Calendar::with_holidays([thanksgiving]);
 ///
 /// let combined = calendar_unions(&[uk, us]);
 /// assert!(combined.get_holidays().contains(&thanksgiving));
@@ -124,18 +119,58 @@ impl Calendar {
         }
     }
 
+    /// Construct a calendar with holiday dates and no weekend days.
+    ///
+    /// Accepts any iterator of holiday dates. Duplicate dates are silently
+    /// ignored.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use chrono::NaiveDate;
+    /// use findates::calendar::Calendar;
+    ///
+    /// let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
+    /// let cal = Calendar::with_holidays([xmas]);
+    /// assert!(cal.get_holidays().contains(&xmas));
+    /// ```
+    pub fn with_holidays(holidays: impl IntoIterator<Item = NaiveDate>) -> Self {
+        let mut calendar = Self::new();
+        calendar.add_holidays(holidays);
+        calendar
+    }
+
+    /// Construct a calendar with weekend weekdays and no holidays.
+    ///
+    /// Accepts any iterator of weekdays. Duplicate weekdays are silently
+    /// ignored.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use chrono::Weekday;
+    /// use findates::calendar::Calendar;
+    ///
+    /// let cal = Calendar::with_weekends([Weekday::Sat, Weekday::Sun]);
+    /// assert!(cal.get_weekend().contains(&Weekday::Sat));
+    /// ```
+    pub fn with_weekends(weekends: impl IntoIterator<Item = Weekday>) -> Self {
+        let mut calendar = Self::new();
+        calendar.add_weekends(weekends);
+        calendar
+    }
+
     /// Returns a reference to the set of holiday dates.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use std::collections::HashSet;
     /// use chrono::NaiveDate;
     /// use findates::calendar::Calendar;
     ///
     /// let mut cal = Calendar::new();
     /// let d = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
-    /// cal.add_holidays(&[d].into_iter().collect());
+    /// cal.add_holidays([d]);
     /// assert!(cal.get_holidays().contains(&d));
     /// ```
     pub fn get_holidays(&self) -> &HashSet<NaiveDate> {
@@ -147,12 +182,11 @@ impl Calendar {
     /// # Examples
     ///
     /// ```rust
-    /// use std::collections::HashSet;
     /// use chrono::Weekday;
     /// use findates::calendar::Calendar;
     ///
     /// let mut cal = Calendar::new();
-    /// cal.add_weekends(&[Weekday::Sat, Weekday::Sun].into_iter().collect());
+    /// cal.add_weekends([Weekday::Sat, Weekday::Sun]);
     /// assert!(cal.get_weekend().contains(&Weekday::Sat));
     /// ```
     pub fn get_weekend(&self) -> &HashSet<Weekday> {
@@ -161,39 +195,41 @@ impl Calendar {
 
     /// Adds dates to the holiday set (union with existing holidays).
     ///
-    /// Accepts a `&HashSet<NaiveDate>`. To add dates from a `Vec` or other
-    /// iterator, collect into a `HashSet` first:
+    /// Accepts any iterator of holiday dates. Duplicate dates are silently
+    /// ignored.
+    ///
     /// # Examples
     ///
     /// ```rust
-    /// use std::collections::HashSet;
     /// use chrono::NaiveDate;
     /// use findates::calendar::Calendar;
     ///
     /// let mut cal = Calendar::new();
     /// let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
-    /// cal.add_holidays(&[xmas].into_iter().collect());
+    /// cal.add_holidays([xmas]);
     /// assert!(cal.get_holidays().contains(&xmas));
     /// ```
-    pub fn add_holidays(&mut self, holidays: &HashSet<NaiveDate>) {
-        self.holidays = self.holidays.union(holidays).cloned().collect();
+    pub fn add_holidays(&mut self, holidays: impl IntoIterator<Item = NaiveDate>) {
+        self.holidays.extend(holidays);
     }
 
     /// Adds weekdays to the weekend set (union with existing weekend days).
     ///
+    /// Accepts any iterator of weekdays. Duplicate weekdays are silently
+    /// ignored.
+    ///
     /// # Examples
     ///
     /// ```rust
-    /// use std::collections::HashSet;
     /// use chrono::Weekday;
     /// use findates::calendar::Calendar;
     ///
     /// let mut cal = Calendar::new();
-    /// cal.add_weekends(&[Weekday::Sat, Weekday::Sun].into_iter().collect());
+    /// cal.add_weekends([Weekday::Sat, Weekday::Sun]);
     /// assert!(cal.get_weekend().contains(&Weekday::Sun));
     /// ```
-    pub fn add_weekends(&mut self, weekends: &HashSet<Weekday>) {
-        self.weekend = self.weekend.union(weekends).cloned().collect();
+    pub fn add_weekends(&mut self, weekends: impl IntoIterator<Item = Weekday>) {
+        self.weekend.extend(weekends);
     }
 
     /// Mutates `self` to be the union of `self` and `other`.
@@ -204,15 +240,14 @@ impl Calendar {
     /// # Examples
     ///
     /// ```rust
-    /// use std::collections::HashSet;
     /// use chrono::{NaiveDate, Weekday};
     /// use findates::calendar::Calendar;
     ///
     /// let mut cal1 = Calendar::new();
-    /// cal1.add_weekends(&[Weekday::Sat].into_iter().collect());
+    /// cal1.add_weekends([Weekday::Sat]);
     ///
     /// let mut cal2 = Calendar::new();
-    /// cal2.add_weekends(&[Weekday::Sun].into_iter().collect());
+    /// cal2.add_weekends([Weekday::Sun]);
     ///
     /// cal1.union(&cal2);
     /// assert!(cal1.get_weekend().contains(&Weekday::Sat));
@@ -253,7 +288,6 @@ impl Calendar {
     /// # Examples
     ///
     /// ```rust
-    /// use std::collections::HashSet;
     /// use chrono::{NaiveDate, Weekday};
     /// use findates::calendar::Calendar;
     ///
@@ -261,10 +295,10 @@ impl Calendar {
     /// let boxing = NaiveDate::from_ymd_opt(2024, 12, 26).unwrap();
     ///
     /// let mut cal1 = Calendar::new();
-    /// cal1.add_holidays(&[xmas, boxing].into_iter().collect());
+    /// cal1.add_holidays([xmas, boxing]);
     ///
     /// let mut cal2 = Calendar::new();
-    /// cal2.add_holidays(&[xmas].into_iter().collect());
+    /// cal2.add_holidays([xmas]);
     ///
     /// cal1.intersection(&cal2);
     /// assert!(cal1.get_holidays().contains(&xmas));
@@ -292,7 +326,7 @@ mod tests {
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
         let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
-        cal.add_holidays(&new_holidays);
+        cal.add_holidays(new_holidays.clone());
         assert_eq!(cal.holidays, new_holidays);
     }
 
@@ -300,8 +334,101 @@ mod tests {
     fn add_weekends_test() {
         let mut cal = Calendar::new();
         let new_weekend: HashSet<Weekday> = [Weekday::Mon].into_iter().collect();
-        cal.add_weekends(&new_weekend);
+        cal.add_weekends(new_weekend.clone());
         assert_eq!(cal.weekend, new_weekend);
+    }
+
+    #[test]
+    fn with_holidays_accepts_vec() {
+        let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let cal = Calendar::with_holidays(vec![christmas_day, boxing_day]);
+
+        assert!(cal.holidays.contains(&christmas_day));
+        assert!(cal.holidays.contains(&boxing_day));
+        assert!(cal.weekend.is_empty());
+    }
+
+    #[test]
+    fn with_holidays_accepts_hashset() {
+        let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
+        let cal = Calendar::with_holidays(holidays.clone());
+
+        assert_eq!(cal.holidays, holidays);
+        assert!(cal.weekend.is_empty());
+    }
+
+    #[test]
+    fn with_holidays_accepts_array_and_iterator() {
+        let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let array_cal = Calendar::with_holidays([christmas_day, boxing_day]);
+        let iterator_cal = Calendar::with_holidays([christmas_day, boxing_day].into_iter().take(1));
+
+        assert_eq!(array_cal.holidays.len(), 2);
+        assert!(array_cal.holidays.contains(&christmas_day));
+        assert!(array_cal.holidays.contains(&boxing_day));
+        assert_eq!(iterator_cal.holidays, [christmas_day].into_iter().collect());
+    }
+
+    #[test]
+    fn with_weekends_accepts_array() {
+        let cal = Calendar::with_weekends([Weekday::Sat, Weekday::Sun]);
+
+        assert_eq!(
+            cal.weekend,
+            [Weekday::Sat, Weekday::Sun].into_iter().collect()
+        );
+        assert!(cal.holidays.is_empty());
+    }
+
+    #[test]
+    fn with_weekends_accepts_vec_and_hashset() {
+        let vec_cal = Calendar::with_weekends(vec![Weekday::Sat, Weekday::Sun]);
+        let weekend: HashSet<Weekday> = [Weekday::Sat, Weekday::Sun].into_iter().collect();
+        let hashset_cal = Calendar::with_weekends(weekend.clone());
+
+        assert_eq!(vec_cal.weekend, weekend);
+        assert_eq!(hashset_cal.weekend, weekend);
+    }
+
+    #[test]
+    fn with_weekends_accepts_iterator() {
+        let cal = Calendar::with_weekends(
+            [Weekday::Sat, Weekday::Sun]
+                .into_iter()
+                .filter(|weekday| *weekday == Weekday::Sat),
+        );
+
+        assert_eq!(cal.weekend, [Weekday::Sat].into_iter().collect());
+        assert!(cal.holidays.is_empty());
+    }
+
+    #[test]
+    fn calendar_constructors_accept_empty_iterators() {
+        let holidays = Calendar::with_holidays(std::iter::empty::<NaiveDate>());
+        let weekends = Calendar::with_weekends(std::iter::empty::<Weekday>());
+
+        assert!(holidays.holidays.is_empty());
+        assert!(holidays.weekend.is_empty());
+        assert!(weekends.holidays.is_empty());
+        assert!(weekends.weekend.is_empty());
+    }
+
+    #[test]
+    fn calendar_iterators_ignore_duplicates() {
+        let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
+        let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
+        let mut cal = Calendar::with_holidays([christmas_day, christmas_day]);
+        let weekends = Calendar::with_weekends([Weekday::Sun, Weekday::Sun]);
+
+        cal.add_holidays([boxing_day, boxing_day]);
+        cal.add_weekends([Weekday::Sat, Weekday::Sat]);
+        assert_eq!(cal.holidays.len(), 2);
+        assert_eq!(cal.weekend.len(), 1);
+        assert_eq!(weekends.weekend.len(), 1);
     }
 
     #[test]
@@ -310,7 +437,7 @@ mod tests {
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
         let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
-        cal.add_holidays(&new_holidays);
+        cal.add_holidays(new_holidays.clone());
         assert_eq!(cal.get_holidays(), &new_holidays);
     }
 
@@ -318,7 +445,7 @@ mod tests {
     fn get_weekend_test() {
         let mut cal = Calendar::new();
         let new_weekend: HashSet<Weekday> = [Weekday::Mon].into_iter().collect();
-        cal.add_weekends(&new_weekend);
+        cal.add_weekends(new_weekend.clone());
         assert_eq!(cal.get_weekend(), &new_weekend);
     }
 
@@ -328,15 +455,15 @@ mod tests {
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
 
         let mut cal1 = Calendar::new();
-        cal1.add_weekends(&[Weekday::Sat].into_iter().collect());
-        cal1.add_holidays(&[christmas_day].into_iter().collect());
+        cal1.add_weekends([Weekday::Sat]);
+        cal1.add_holidays([christmas_day]);
 
         let mut cal2 = Calendar::new();
-        cal2.add_weekends(&[Weekday::Sun].into_iter().collect());
-        cal2.add_holidays(&[boxing_day].into_iter().collect());
+        cal2.add_weekends([Weekday::Sun]);
+        cal2.add_holidays([boxing_day]);
 
         let mut expected = c::basic_calendar();
-        expected.add_holidays(&[christmas_day, boxing_day].into_iter().collect());
+        expected.add_holidays([christmas_day, boxing_day]);
 
         cal1.union(&cal2);
         assert_eq!(cal1, expected);
@@ -348,16 +475,16 @@ mod tests {
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
 
         let mut cal1 = Calendar::new();
-        cal1.add_weekends(&[Weekday::Sun].into_iter().collect());
-        cal1.add_holidays(&[christmas_day].into_iter().collect());
+        cal1.add_weekends([Weekday::Sun]);
+        cal1.add_holidays([christmas_day]);
 
         let mut cal2 = Calendar::new();
-        cal2.add_weekends(&[Weekday::Sun].into_iter().collect());
-        cal2.add_holidays(&[christmas_day, boxing_day].into_iter().collect());
+        cal2.add_weekends([Weekday::Sun]);
+        cal2.add_holidays([christmas_day, boxing_day]);
 
         let mut expected = Calendar::new();
-        expected.add_weekends(&[Weekday::Sun].into_iter().collect());
-        expected.add_holidays(&[christmas_day].into_iter().collect());
+        expected.add_weekends([Weekday::Sun]);
+        expected.add_holidays([christmas_day]);
 
         cal1.intersection(&cal2);
         assert_eq!(cal1, expected);
@@ -374,9 +501,9 @@ mod tests {
     fn calendar_unions_test() {
         let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
         let mut cal1 = Calendar::new();
-        cal1.add_weekends(&[Weekday::Sat].into_iter().collect());
+        cal1.add_weekends([Weekday::Sat]);
         let mut cal2 = Calendar::new();
-        cal2.add_holidays(&[xmas].into_iter().collect());
+        cal2.add_holidays([xmas]);
 
         let combined = c::calendar_unions(&[cal1, cal2]);
         assert!(combined.get_weekend().contains(&Weekday::Sat));

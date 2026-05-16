@@ -28,7 +28,7 @@ fn is_business_day_test() {
     assert!(algebra::is_business_day(&christmas_day, &basic_cal));
 
     // After adding to calendar, Christmas should not be a business day
-    basic_cal.add_holidays(&[christmas_day].into_iter().collect());
+    basic_cal.add_holidays([christmas_day]);
     assert!(!algebra::is_business_day(&christmas_day, &basic_cal));
 }
 
@@ -51,7 +51,7 @@ fn schedule_test() {
     }
 
     let mut cal = calendar::basic_calendar();
-    cal.add_holidays(&[hol].into_iter().collect());
+    cal.add_holidays([hol]);
 
     let start_date: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 2).unwrap();
     let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
@@ -76,7 +76,7 @@ fn bus_days_between_test() {
     }
 
     let mut cal = calendar::basic_calendar();
-    cal.add_holidays(&[hol].into_iter().collect());
+    cal.add_holidays([hol]);
 
     let start_date: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 1).unwrap();
     let end_date: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 29).unwrap();
@@ -116,7 +116,7 @@ fn bus_day_schedule_holiday_gap_test() {
     let mut cal = calendar::basic_calendar();
     let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
     let boxing_day = NaiveDate::from_ymd_opt(2024, 12, 26).unwrap();
-    cal.add_holidays(&[xmas, boxing_day].into_iter().collect());
+    cal.add_holidays([xmas, boxing_day]);
 
     let start = NaiveDate::from_ymd_opt(2024, 12, 23).unwrap(); // Monday
     let end = NaiveDate::from_ymd_opt(2024, 12, 27).unwrap(); // Friday

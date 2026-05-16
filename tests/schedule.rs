@@ -6,7 +6,6 @@ use chrono::{Datelike, NaiveDate};
 use findates::calendar;
 use findates::conventions::{AdjustRule, Frequency};
 use findates::schedule::{schedule_next_adjusted, Schedule};
-use std::collections::HashSet;
 
 // Test setup with calendar and holidays
 struct ScheduleSetup {
@@ -18,8 +17,7 @@ impl ScheduleSetup {
         let mut basic_cal = calendar::basic_calendar();
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
-        let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
-        basic_cal.add_holidays(&new_holidays);
+        basic_cal.add_holidays([christmas_day, boxing_day]);
         Self { cal: basic_cal }
     }
 }

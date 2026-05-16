@@ -7,7 +7,6 @@ use findates::algebra::day_count_fraction;
 use findates::calendar;
 use findates::conventions::{AdjustRule, DayCount};
 use findates::DayCountError;
-use std::collections::HashSet;
 
 fn round_decimals(x: f64) -> f64 {
     let multiplier = 100000.0;
@@ -23,8 +22,7 @@ impl DayCountSetup {
         let mut basic_cal = calendar::basic_calendar();
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
-        let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
-        basic_cal.add_holidays(&new_holidays);
+        basic_cal.add_holidays([christmas_day, boxing_day]);
         Self { cal: basic_cal }
     }
 }
