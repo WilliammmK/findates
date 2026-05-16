@@ -10,6 +10,7 @@
 
 use chrono::NaiveDate;
 use chrono::Weekday;
+use std::borrow::Borrow;
 use std::collections::HashSet;
 
 /// A business-day calendar.
@@ -121,8 +122,8 @@ impl Calendar {
 
     /// Construct a calendar with holiday dates and no weekend days.
     ///
-    /// Accepts any iterator of holiday dates. Duplicate dates are silently
-    /// ignored.
+    /// Accepts any iterable of holiday dates, including borrowed collections.
+    /// Duplicate dates are silently ignored.
     ///
     /// # Examples
     ///
@@ -134,7 +135,11 @@ impl Calendar {
     /// let cal = Calendar::with_holidays([xmas]);
     /// assert!(cal.get_holidays().contains(&xmas));
     /// ```
-    pub fn with_holidays(holidays: impl IntoIterator<Item = NaiveDate>) -> Self {
+    pub fn with_holidays<I>(holidays: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Borrow<NaiveDate>,
+    {
         let mut calendar = Self::new();
         calendar.add_holidays(holidays);
         calendar
@@ -142,8 +147,8 @@ impl Calendar {
 
     /// Construct a calendar with weekend weekdays and no holidays.
     ///
-    /// Accepts any iterator of weekdays. Duplicate weekdays are silently
-    /// ignored.
+    /// Accepts any iterable of weekdays, including borrowed collections.
+    /// Duplicate weekdays are silently ignored.
     ///
     /// # Examples
     ///
@@ -154,7 +159,11 @@ impl Calendar {
     /// let cal = Calendar::with_weekends([Weekday::Sat, Weekday::Sun]);
     /// assert!(cal.get_weekend().contains(&Weekday::Sat));
     /// ```
-    pub fn with_weekends(weekends: impl IntoIterator<Item = Weekday>) -> Self {
+    pub fn with_weekends<I>(weekends: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Borrow<Weekday>,
+    {
         let mut calendar = Self::new();
         calendar.add_weekends(weekends);
         calendar
@@ -195,8 +204,8 @@ impl Calendar {
 
     /// Adds dates to the holiday set (union with existing holidays).
     ///
-    /// Accepts any iterator of holiday dates. Duplicate dates are silently
-    /// ignored.
+    /// Accepts any iterable of holiday dates, including borrowed collections.
+    /// Duplicate dates are silently ignored.
     ///
     /// # Examples
     ///
@@ -209,14 +218,19 @@ impl Calendar {
     /// cal.add_holidays([xmas]);
     /// assert!(cal.get_holidays().contains(&xmas));
     /// ```
-    pub fn add_holidays(&mut self, holidays: impl IntoIterator<Item = NaiveDate>) {
-        self.holidays.extend(holidays);
+    pub fn add_holidays<I>(&mut self, holidays: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<NaiveDate>,
+    {
+        self.holidays
+            .extend(holidays.into_iter().map(|holiday| *holiday.borrow()));
     }
 
     /// Adds weekdays to the weekend set (union with existing weekend days).
     ///
-    /// Accepts any iterator of weekdays. Duplicate weekdays are silently
-    /// ignored.
+    /// Accepts any iterable of weekdays, including borrowed collections.
+    /// Duplicate weekdays are silently ignored.
     ///
     /// # Examples
     ///
@@ -228,8 +242,13 @@ impl Calendar {
     /// cal.add_weekends([Weekday::Sat, Weekday::Sun]);
     /// assert!(cal.get_weekend().contains(&Weekday::Sun));
     /// ```
-    pub fn add_weekends(&mut self, weekends: impl IntoIterator<Item = Weekday>) {
-        self.weekend.extend(weekends);
+    pub fn add_weekends<I>(&mut self, weekends: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<Weekday>,
+    {
+        self.weekend
+            .extend(weekends.into_iter().map(|weekday| *weekday.borrow()));
     }
 
     /// Mutates `self` to be the union of `self` and `other`.
@@ -326,7 +345,7 @@ mod tests {
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
         let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
-        cal.add_holidays(new_holidays.clone());
+        cal.add_holidays(&new_holidays);
         assert_eq!(cal.holidays, new_holidays);
     }
 
@@ -334,7 +353,7 @@ mod tests {
     fn add_weekends_test() {
         let mut cal = Calendar::new();
         let new_weekend: HashSet<Weekday> = [Weekday::Mon].into_iter().collect();
-        cal.add_weekends(new_weekend.clone());
+        cal.add_weekends(&new_weekend);
         assert_eq!(cal.weekend, new_weekend);
     }
 
@@ -354,7 +373,7 @@ mod tests {
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
         let holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
-        let cal = Calendar::with_holidays(holidays.clone());
+        let cal = Calendar::with_holidays(&holidays);
 
         assert_eq!(cal.holidays, holidays);
         assert!(cal.weekend.is_empty());
@@ -388,7 +407,7 @@ mod tests {
     fn with_weekends_accepts_vec_and_hashset() {
         let vec_cal = Calendar::with_weekends(vec![Weekday::Sat, Weekday::Sun]);
         let weekend: HashSet<Weekday> = [Weekday::Sat, Weekday::Sun].into_iter().collect();
-        let hashset_cal = Calendar::with_weekends(weekend.clone());
+        let hashset_cal = Calendar::with_weekends(&weekend);
 
         assert_eq!(vec_cal.weekend, weekend);
         assert_eq!(hashset_cal.weekend, weekend);
@@ -432,12 +451,23 @@ mod tests {
     }
 
     #[test]
+    fn add_methods_accept_empty_iterators() {
+        let mut cal = Calendar::new();
+
+        cal.add_holidays(std::iter::empty::<NaiveDate>());
+        cal.add_weekends(std::iter::empty::<Weekday>());
+
+        assert!(cal.holidays.is_empty());
+        assert!(cal.weekend.is_empty());
+    }
+
+    #[test]
     fn get_holidays_test() {
         let mut cal = c::basic_calendar();
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
         let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
-        cal.add_holidays(new_holidays.clone());
+        cal.add_holidays(&new_holidays);
         assert_eq!(cal.get_holidays(), &new_holidays);
     }
 
@@ -445,7 +475,7 @@ mod tests {
     fn get_weekend_test() {
         let mut cal = Calendar::new();
         let new_weekend: HashSet<Weekday> = [Weekday::Mon].into_iter().collect();
-        cal.add_weekends(new_weekend.clone());
+        cal.add_weekends(&new_weekend);
         assert_eq!(cal.get_weekend(), &new_weekend);
     }
 

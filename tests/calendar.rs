@@ -5,6 +5,7 @@
 use chrono::{Datelike, NaiveDate, Weekday};
 use findates::algebra;
 use findates::calendar;
+use findates::calendar::Calendar;
 use findates::conventions::AdjustRule;
 
 // ============================================================================
@@ -30,6 +31,27 @@ fn is_business_day_test() {
     // After adding to calendar, Christmas should not be a business day
     basic_cal.add_holidays([christmas_day]);
     assert!(!algebra::is_business_day(&christmas_day, &basic_cal));
+}
+
+#[test]
+fn convenience_constructors_work_in_business_day_logic() {
+    let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
+    let boxing_day = NaiveDate::from_ymd_opt(2024, 12, 26).unwrap();
+    let saturday = NaiveDate::from_ymd_opt(2024, 12, 28).unwrap();
+
+    let mut cal = Calendar::with_weekends([Weekday::Sat, Weekday::Sun]);
+    cal.add_holidays(vec![xmas, xmas, boxing_day]);
+
+    let holiday_only = Calendar::with_holidays([xmas, boxing_day].into_iter().take(1));
+
+    assert!(!algebra::is_business_day(&xmas, &cal));
+    assert!(!algebra::is_business_day(&saturday, &cal));
+    assert!(holiday_only.get_holidays().contains(&xmas));
+    assert_eq!(holiday_only.get_holidays().len(), 1);
+    assert_eq!(
+        algebra::adjust(&xmas, Some(&cal), Some(AdjustRule::Following)),
+        NaiveDate::from_ymd_opt(2024, 12, 27).unwrap()
+    );
 }
 
 // ============================================================================
