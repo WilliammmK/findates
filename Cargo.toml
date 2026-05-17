@@ -2,7 +2,7 @@
 name = "findates"
 version = "0.1.2"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.71"
 license = "MIT OR Apache-2.0"
 description = "Financial date arithmetic: business day calendars, day count conventions, and schedule generation."
 repository = "https://github.com/WilliammmK/findates"
