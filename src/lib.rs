@@ -14,7 +14,7 @@
 //! - [`conventions`] — [`DayCount`](conventions::DayCount), [`AdjustRule`](conventions::AdjustRule), [`Frequency`](conventions::Frequency) enums
 //! - [`algebra`] — core functions: business day checks, adjustment, day count fractions, schedule counting
 //! - [`schedule`] — [`Schedule`](schedule::Schedule) and lazy [`ScheduleIterator`](schedule::ScheduleIterator)
-//! - [`error`] — [`DayCountError`] returned by fallible functions
+//! - [`error`] — [`DayCountError`], [`BusinessDayError`] returned by fallible functions
 //!
 //! ## Features
 //!
@@ -77,6 +77,7 @@ pub(crate) mod date;
 pub mod error;
 pub mod schedule;
 
+pub use error::BusinessDayError;
 pub use error::DayCountError;
 
 /// Type alias for the date type used throughout the library.

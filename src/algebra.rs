@@ -6,7 +6,7 @@
 
 use crate::calendar::Calendar;
 use crate::conventions::{AdjustRule, DayCount};
-use crate::error::DayCountError;
+use crate::error::{BusinessDayError, DayCountError};
 use chrono::{Datelike, Days, NaiveDate};
 
 /// Returns `true` if `date` is a good business day in `calendar`.
@@ -387,6 +387,80 @@ pub fn checked_add_years(date: &NaiveDate, years_to_add: i32) -> Option<NaiveDat
         date.month(),
         date.day(),
     )
+}
+
+/// Moves `date` forward by `n` business days in `calendar`.
+///
+/// **Precondition**: `date` must already be a business day.  If it is not,
+/// [`Err(BusinessDayError::InvalidStartDate)`](BusinessDayError::InvalidStartDate)
+/// is returned — including when `n = 0`.  The recommended workflow is to
+/// adjust the start date first, then call this function:
+///
+/// ```rust
+/// use chrono::NaiveDate;
+/// use findates::calendar::basic_calendar;
+/// use findates::conventions::AdjustRule;
+/// use findates::algebra::{adjust, add_business_days};
+///
+/// let cal = basic_calendar();
+/// // Start from a Saturday — adjust to Monday first, then step forward.
+/// let saturday = NaiveDate::from_ymd_opt(2024, 3, 16).unwrap();
+/// let monday   = adjust(&saturday, Some(&cal), Some(AdjustRule::Following));
+/// let result   = add_business_days(&monday, 3, &cal).unwrap();
+/// assert_eq!(result, NaiveDate::from_ymd_opt(2024, 3, 21).unwrap()); // Thursday
+/// ```
+///
+/// When `n = 0` and `date` is a business day, `date` is returned unchanged.
+pub fn add_business_days(
+    date: &NaiveDate,
+    n: u32,
+    calendar: &Calendar,
+) -> Result<NaiveDate, BusinessDayError> {
+    if !is_business_day(date, calendar) {
+        return Err(BusinessDayError::InvalidStartDate);
+    }
+    let mut current = *date;
+    for _ in 0..n {
+        current = add_adjust(&current, calendar);
+    }
+    Ok(current)
+}
+
+/// Moves `date` backward by `n` business days in `calendar`.
+///
+/// **Precondition**: `date` must already be a business day.  If it is not,
+/// [`Err(BusinessDayError::InvalidStartDate)`](BusinessDayError::InvalidStartDate)
+/// is returned — including when `n = 0`.  The recommended workflow is to
+/// adjust the start date first, then call this function:
+///
+/// ```rust
+/// use chrono::NaiveDate;
+/// use findates::calendar::basic_calendar;
+/// use findates::conventions::AdjustRule;
+/// use findates::algebra::{adjust, subtract_business_days};
+///
+/// let cal = basic_calendar();
+/// // Start from a Saturday — adjust to Monday first, then step backward.
+/// let saturday = NaiveDate::from_ymd_opt(2024, 3, 16).unwrap();
+/// let monday   = adjust(&saturday, Some(&cal), Some(AdjustRule::Following));
+/// let result   = subtract_business_days(&monday, 1, &cal).unwrap();
+/// assert_eq!(result, NaiveDate::from_ymd_opt(2024, 3, 15).unwrap()); // Friday
+/// ```
+///
+/// When `n = 0` and `date` is a business day, `date` is returned unchanged.
+pub fn subtract_business_days(
+    date: &NaiveDate,
+    n: u32,
+    calendar: &Calendar,
+) -> Result<NaiveDate, BusinessDayError> {
+    if !is_business_day(date, calendar) {
+        return Err(BusinessDayError::InvalidStartDate);
+    }
+    let mut current = *date;
+    for _ in 0..n {
+        current = sub_adjust(&current, calendar);
+    }
+    Ok(current)
 }
 
 fn is_leap_year(year: i32) -> bool {
