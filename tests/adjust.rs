@@ -83,11 +83,7 @@ fn adjust_modfollowing_test() {
 fn adjust_modpreceding_test() {
     let setup = AdjustSetup::new();
     let mut cal = setup.cal;
-    cal.add_holidays(
-        &[NaiveDate::from_ymd_opt(2023, 2, 1).unwrap()]
-            .into_iter()
-            .collect(),
-    );
+    cal.add_holidays([NaiveDate::from_ymd_opt(2023, 2, 1).unwrap()]);
     let bom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 1).unwrap();
     let boy: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
     assert_eq!(
@@ -113,7 +109,7 @@ fn adjust_halfmonthmodfollowing_test() {
     let setup = AdjustSetup::new();
     let mut cal = setup.cal;
     let new_hol = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
-    cal.add_holidays(&[new_hol].into_iter().collect());
+    cal.add_holidays([new_hol]);
     let eom: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 30).unwrap();
     let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // Saturday
     assert_eq!(
@@ -155,7 +151,7 @@ fn adjust_nearest_test() {
     let setup = AdjustSetup::new();
     let mut cal = setup.cal;
     let new_hol = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
-    cal.add_holidays(&[new_hol].into_iter().collect());
+    cal.add_holidays([new_hol]);
     let bom: NaiveDate = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap();
     let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // Saturday
     assert_eq!(
@@ -185,7 +181,7 @@ fn adjust_unadjusted_test() {
     let setup = AdjustSetup::new();
     let mut cal = setup.cal;
     let new_hol = NaiveDate::from_ymd_opt(2023, 2, 15).unwrap();
-    cal.add_holidays(&[new_hol].into_iter().collect());
+    cal.add_holidays([new_hol]);
     let mom: NaiveDate = NaiveDate::from_ymd_opt(2023, 1, 14).unwrap(); // Saturday
     assert_eq!(
         algebra::adjust(&new_hol, Some(&cal), Some(AdjustRule::Unadjusted)),
@@ -251,7 +247,7 @@ fn checked_add_years_feb29_leap_to_nonleap_test() {
 fn adjust_unadjusted_holiday_unchanged_test() {
     let mut cal = calendar::basic_calendar();
     let xmas = NaiveDate::from_ymd_opt(2024, 12, 25).unwrap();
-    cal.add_holidays(&[xmas].into_iter().collect());
+    cal.add_holidays([xmas]);
     let result = algebra::adjust(&xmas, Some(&cal), Some(AdjustRule::Unadjusted));
     assert_eq!(result, xmas);
 }

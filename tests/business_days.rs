@@ -11,7 +11,7 @@ fn d(y: i32, m: u32, day: u32) -> NaiveDate {
 
 fn calendar_with_holiday(date: NaiveDate) -> Calendar {
     let mut cal = basic_calendar();
-    cal.add_holidays(&[date].into_iter().collect());
+    cal.add_holidays([date]);
     cal
 }
 

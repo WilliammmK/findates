@@ -2,8 +2,6 @@
 // National Holidays: https://www.law.cornell.edu/uscode/text/5/6103
 // NY Federal Reserve published calendar: https://www.frbservices.org/about/holiday-schedules.
 
-use std::collections::HashSet;
-
 use chrono::{Datelike, NaiveDate, Weekday};
 use findates::algebra;
 use findates::calendar::Calendar;
@@ -24,9 +22,8 @@ impl AdjustSetup {
         let mut basic_cal: Calendar = findates::calendar::basic_calendar();
         let christmas_day = NaiveDate::from_ymd_opt(2023, 12, 25).unwrap();
         let boxing_day = NaiveDate::from_ymd_opt(2023, 12, 26).unwrap();
-        let new_holidays: HashSet<NaiveDate> = [christmas_day, boxing_day].into_iter().collect();
         let test_weekend: NaiveDate = NaiveDate::from_ymd_opt(2023, 9, 2).unwrap(); // Saturday
-        basic_cal.add_holidays(&new_holidays);
+        basic_cal.add_holidays([christmas_day, boxing_day]);
         Self {
             cal: basic_cal,
             test_holiday: christmas_day,
@@ -42,8 +39,7 @@ pub fn calendar_setup() -> Calendar {
     let mut ny_fed_calendar: Calendar = Calendar::new();
 
     // Adding weekends
-    let weekend: HashSet<Weekday> = [Weekday::Sat, Weekday::Sun].into_iter().collect();
-    ny_fed_calendar.add_weekends(&weekend);
+    ny_fed_calendar.add_weekends([Weekday::Sat, Weekday::Sun]);
 
     // Calculated all holiday dates for the next ten years and add them to the calendar
     // New Years
@@ -173,7 +169,7 @@ pub fn calendar_setup() -> Calendar {
 
     // Adding all Holidays to the calendar
     // Now let's add all of those dates to our calendar.
-    let all_holidays: HashSet<NaiveDate> = itertools::concat([
+    let all_holidays: Vec<NaiveDate> = itertools::concat([
         new_years,
         christmas_days,
         indep_days,
@@ -189,7 +185,7 @@ pub fn calendar_setup() -> Calendar {
     .into_iter()
     .collect();
 
-    ny_fed_calendar.add_holidays(&all_holidays);
+    ny_fed_calendar.add_holidays(all_holidays);
 
     return ny_fed_calendar;
 }

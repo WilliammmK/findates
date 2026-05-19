@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 /// An example program used to first create a calendar with
 /// the NY Federal reserve holidays and then using that calendar
 /// to generate a payment schedule for a bond in USD.
@@ -49,8 +47,7 @@ fn main() {
 
     // Saturdays and Sundays are non-business days there, so let's add those
     // to the weekend field of our calendar:
-    let weekend: HashSet<Weekday> = [Weekday::Sat, Weekday::Sun].into_iter().collect();
-    ny_fed_calendar.add_weekends(&weekend);
+    ny_fed_calendar.add_weekends([Weekday::Sat, Weekday::Sun]);
     println!("{:?}", ny_fed_calendar.get_weekend());
 
     // Starting with the Fixed date holidays, let's create a schedule and an iterator for the NY's day:
@@ -93,7 +90,7 @@ fn main() {
     println!("The actual observed days: {:?}", &real_new_years);
 
     // Lets add these to our calendar:
-    // ny_fed_calendar.add_holidays(&real_new_years.into_iter().collect());
+    // ny_fed_calendar.add_holidays(real_new_years);
 
     // It turns out that for the next four years NY's days will fall
     // on Weekdays, so no adjustment was needed! Let's repeat this procedure
@@ -235,7 +232,7 @@ fn main() {
     all_holidays.sort();
     println!("Holiday Calendar: {:?}", &all_holidays);
 
-    ny_fed_calendar.add_holidays(&all_holidays.into_iter().collect());
+    ny_fed_calendar.add_holidays(all_holidays);
 
     // Now let's see how our calendar looks:
     println!(
