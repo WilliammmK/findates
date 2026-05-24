@@ -132,22 +132,36 @@ impl FromStr for DayCount {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AdjustRule {
     /// Choose the first business day after the given holiday.
+    ///
+    /// QuantLib equivalent: `BusinessDayConvention::Following`
     Following,
     /// Choose the first business day after the given holiday unless it belongs
     /// to a different month, in which case choose the first business day before.
+    ///
+    /// QuantLib equivalent: `BusinessDayConvention::ModifiedFollowing`
     ModFollowing,
     /// Choose the first business day before the given holiday.
+    ///
+    /// QuantLib equivalent: `BusinessDayConvention::Preceding`
     Preceding,
     /// Choose the first business day before the given holiday unless it belongs
     /// to a different month, in which case choose the first business day after.
+    ///
+    /// QuantLib equivalent: `BusinessDayConvention::ModifiedPreceding`
     ModPreceding,
     /// Do not adjust.
+    ///
+    /// QuantLib equivalent: `BusinessDayConvention::Unadjusted`
     Unadjusted,
     /// Like [`ModFollowing`](AdjustRule::ModFollowing) but also constrains the
     /// result to stay on the same side of the 15th of the month.
+    ///
+    /// QuantLib equivalent: `BusinessDayConvention::HalfMonthModifiedFollowing`
     HalfMonthModFollowing,
     /// Choose the nearest business day. When both sides are equidistant, prefer
     /// [`Following`](AdjustRule::Following).
+    ///
+    /// QuantLib equivalent: `BusinessDayConvention::Nearest`
     Nearest,
 }
 
@@ -226,18 +240,30 @@ pub enum Frequency {
     /// [`Schedule::generate`](crate::schedule::Schedule::generate),
     /// this returns just the end date. The iterator yields no elements
     /// after the anchor.
+    ///
+    /// QuantLib equivalent: `Frequency::Once` (named `Zero` in findates)
     Zero,
     /// Once a year.
+    ///
+    /// QuantLib equivalent: `Frequency::Annual`
     Annual,
     /// Twice a year.
+    ///
+    /// QuantLib equivalent: `Frequency::Semiannual`
     Semiannual,
     /// Every four months.
     EveryFourthMonth,
     /// Every three months.
+    ///
+    /// QuantLib equivalent: `Frequency::Quarterly`
     Quarterly,
     /// Every two months.
+    ///
+    /// QuantLib equivalent: `Frequency::Bimonthly`
     Bimonthly,
     /// Once a month.
+    ///
+    /// QuantLib equivalent: `Frequency::Monthly`
     Monthly,
     /// Every month, always landing on the last calendar day of the month.
     /// When a [`Calendar`](crate::calendar::Calendar) and
@@ -247,10 +273,16 @@ pub enum Frequency {
     /// Every four weeks.
     EveryFourthWeek,
     /// Every two weeks.
+    ///
+    /// QuantLib equivalent: `Frequency::Biweekly`
     Biweekly,
     /// Once a week.
+    ///
+    /// QuantLib equivalent: `Frequency::Weekly`
     Weekly,
     /// Every calendar day.
+    ///
+    /// QuantLib equivalent: `Frequency::Daily`
     Daily,
 }
 
