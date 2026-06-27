@@ -35,6 +35,16 @@ pub enum DayCount {
     /// QuantLib equivalent: `Actual365Fixed` (Standard variant)
     Act365,
 
+    /// Actual days divided by 365, always 365 regardless of leap year.
+    /// The standard convention for GBP interest rate swaps, many money
+    /// market instruments, and Asian markets.
+    ///
+    /// Unlike [`Act365`] which uses the actual year length, this convention
+    /// always divides by exactly 365 even in a leap year.
+    ///
+    /// QuantLib equivalent: `Actual365Fixed`
+    Act365Fixed,
+
     /// Business days divided by 252 (Brazilian convention).
     /// Requires a [`Calendar`](crate::calendar::Calendar).
     ///
@@ -54,6 +64,20 @@ pub enum DayCount {
     /// `Thirty360(Thirty360::EurobondBasis)`
     D30360Euro,
 
+    /// 30/360 US: the standard for US corporate and municipal bonds.
+    /// Also known as "30/360" or "360/360".
+    ///
+    /// Rules applied in order:
+    /// 1. If the start date is the 31st, change it to the 30th.
+    /// 2. If the start date is the last day of February, change it to the 30th.
+    /// 3. If the end date is the 31st and the start date is the 30th or 31st,
+    ///    change the end date to the 30th.
+    /// 4. If the end date is the last day of February and the start date is
+    ///    also the last day of February, change the end date to the 30th.
+    ///
+    /// QuantLib equivalent: `Thirty360(Thirty360::USA)`
+    Thirty360US,
+
     /// 30/365: months of 30 days, year of 365 days.
     ///
     /// QuantLib equivalent: no direct equivalent — closest is
@@ -66,9 +90,11 @@ impl fmt::Display for DayCount {
         match self {
             DayCount::Act360 => write!(f, "Act360"),
             DayCount::Act365 => write!(f, "Act365"),
+            DayCount::Act365Fixed => write!(f, "Act365Fixed"),
             DayCount::Bd252 => write!(f, "Bd252"),
             DayCount::ActActISDA => write!(f, "ActActISDA"),
             DayCount::D30360Euro => write!(f, "D30360Euro"),
+            DayCount::Thirty360US => write!(f, "Thirty360US"),
             DayCount::D30365 => write!(f, "D30365"),
         }
     }
@@ -101,9 +127,11 @@ impl FromStr for DayCount {
         match s {
             "Act360" => Ok(DayCount::Act360),
             "Act365" => Ok(DayCount::Act365),
+            "Act365Fixed" => Ok(DayCount::Act365Fixed),
             "Bd252" => Ok(DayCount::Bd252),
             "ActActISDA" => Ok(DayCount::ActActISDA),
             "D30360Euro" => Ok(DayCount::D30360Euro),
+            "Thirty360US" => Ok(DayCount::Thirty360US),
             "D30365" => Ok(DayCount::D30365),
             _ => Err(ParseDayCountError),
         }
@@ -395,9 +423,11 @@ mod tests {
         let variants = [
             DayCount::Act360,
             DayCount::Act365,
+            DayCount::Act365Fixed,
             DayCount::Bd252,
             DayCount::ActActISDA,
             DayCount::D30360Euro,
+            DayCount::Thirty360US,
             DayCount::D30365,
         ];
         for v in variants {

@@ -211,7 +211,8 @@ pub fn payment_schedule_setup(calendar: &Calendar) -> (Vec<NaiveDate>, Vec<f64>,
             DayCount::D30360Euro,
             None,
             None,
-        ).unwrap();
+        )
+        .unwrap();
         dcfs.push(dcf);
     }
 

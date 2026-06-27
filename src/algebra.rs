@@ -301,6 +301,8 @@ pub fn day_count_fraction(
 
         DayCount::Act365 => Ok(delta as f64 / 365.0),
 
+        DayCount::Act365Fixed => Ok(delta as f64 / 365.0),
+
         DayCount::ActActISDA => {
             if start_adjusted == end_adjusted {
                 return Ok(0.0);
@@ -337,6 +339,18 @@ pub fn day_count_fraction(
             if end_day   == 31 { end_day   = 30; }
             let res = 360 * (end_year - start_year)
                 + 30 * (end_month - start_month)
+                + (end_day - start_day);
+            Ok(res as f64 / 360.0)
+        }
+
+        DayCount::Thirty360US => {
+            let start_is_eom_feb = is_last_day_of_february(start_adjusted);
+            let end_is_eom_feb   = is_last_day_of_february(end_adjusted);
+            if start_day == 31 || start_is_eom_feb { start_day = 30; }
+            if end_day == 31 && start_day >= 30    { end_day = 30; }
+            if end_is_eom_feb && start_is_eom_feb  { end_day = 30; }
+            let res = 360 * (end_year - start_year)
+                + 30  * (end_month - start_month)
                 + (end_day - start_day);
             Ok(res as f64 / 360.0)
         }
@@ -465,4 +479,8 @@ pub fn subtract_business_days(
 
 fn is_leap_year(year: i32) -> bool {
     NaiveDate::from_ymd_opt(year, 2, 29).is_some()
+}
+
+fn is_last_day_of_february(date: NaiveDate) -> bool {
+    date.month() == 2 && (date.day() == 29 || (date.day() == 28 && !is_leap_year(date.year())))
 }

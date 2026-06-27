@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use chrono::NaiveDate;
 use findates::algebra::{add_business_days, subtract_business_days};
 use findates::calendar::{basic_calendar, Calendar};
@@ -17,8 +15,7 @@ fn calendar_with_holiday(date: NaiveDate) -> Calendar {
 
 fn calendar_with_holidays(dates: impl IntoIterator<Item = NaiveDate>) -> Calendar {
     let mut cal = basic_calendar();
-    let set: HashSet<NaiveDate> = dates.into_iter().collect();
-    cal.add_holidays(&set);
+    cal.add_holidays(dates);
     cal
 }
 

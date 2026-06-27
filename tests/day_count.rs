@@ -204,6 +204,98 @@ fn dcf_bd252_with_calendar_returns_ok_test() {
 }
 
 #[test]
+fn dcf_act365fixed_leap_year_test() {
+    // Over a full leap year (366 actual days) Act365Fixed still divides by 365,
+    // so the result is 366/365, not 1.0. This distinguishes it from Act365 and
+    // ActActISDA which both return 1.0 over a full leap year.
+    let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+    let dcf = day_count_fraction(&start, &end, DayCount::Act365Fixed, None, None).unwrap();
+    assert!((dcf - 366.0 / 365.0).abs() < 1e-9);
+}
+
+#[test]
+fn dcf_act365fixed_non_leap_year_test() {
+    // Over a full non-leap year (365 actual days) Act365Fixed returns exactly 1.0.
+    let start = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+    let dcf = day_count_fraction(&start, &end, DayCount::Act365Fixed, None, None).unwrap();
+    assert!((dcf - 1.0).abs() < 1e-9);
+}
+
+#[test]
+fn dcf_thirty360us_start_on_31st_test() {
+    // Rule 1: start on 31st → treated as 30th.
+    // start: 2023-01-31 → 30; end: 2023-04-15 (unchanged)
+    // res = 360*0 + 30*(4-1) + (15-30) = 90-15 = 75 → 75/360
+    let start = NaiveDate::from_ymd_opt(2023, 1, 31).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2023, 4, 15).unwrap();
+    let dcf = day_count_fraction(&start, &end, DayCount::Thirty360US, None, None).unwrap();
+    assert!((dcf - 75.0 / 360.0).abs() < 1e-9);
+}
+
+#[test]
+fn dcf_thirty360us_end_on_31st_start_on_30th_test() {
+    // Rule 3: end on 31st and start is 30th → end treated as 30th.
+    // start: 2023-01-30; end: 2023-03-31 → 30
+    // res = 360*0 + 30*(3-1) + (30-30) = 60 → 60/360
+    let start = NaiveDate::from_ymd_opt(2023, 1, 30).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2023, 3, 31).unwrap();
+    let dcf = day_count_fraction(&start, &end, DayCount::Thirty360US, None, None).unwrap();
+    assert!((dcf - 60.0 / 360.0).abs() < 1e-9);
+}
+
+#[test]
+fn dcf_thirty360us_end_on_31st_start_before_30th_test() {
+    // Rule 3 does NOT fire when start < 30: end stays at 31 (i.e. counts as 1st of next month).
+    // start: 2023-01-15; end: 2023-03-31 (stays 31)
+    // res = 360*0 + 30*(3-1) + (31-15) = 60+16 = 76 → 76/360
+    // D30360Euro would give 75/360 (unconditionally treats end 31→30).
+    let start = NaiveDate::from_ymd_opt(2023, 1, 15).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2023, 3, 31).unwrap();
+    let dcf = day_count_fraction(&start, &end, DayCount::Thirty360US, None, None).unwrap();
+    assert!((dcf - 76.0 / 360.0).abs() < 1e-9);
+}
+
+#[test]
+fn dcf_thirty360us_start_on_eom_feb_nonleap_test() {
+    // Rule 2: start on last day of February (non-leap: Feb 28) → treated as 30th.
+    // start: 2023-02-28 → 30; end: 2023-06-15 (unchanged)
+    // res = 360*0 + 30*(6-2) + (15-30) = 120-15 = 105 → 105/360
+    let start = NaiveDate::from_ymd_opt(2023, 2, 28).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2023, 6, 15).unwrap();
+    let dcf = day_count_fraction(&start, &end, DayCount::Thirty360US, None, None).unwrap();
+    assert!((dcf - 105.0 / 360.0).abs() < 1e-9);
+}
+
+#[test]
+fn dcf_thirty360us_both_on_eom_feb_test() {
+    // Rules 2 + 4: both dates on last day of February → both treated as 30th.
+    // start: 2023-02-28 → 30; end: 2024-02-29 (leap) → 30
+    // res = 360*(2024-2023) + 30*(2-2) + (30-30) = 360 → 360/360 = 1.0
+    let start = NaiveDate::from_ymd_opt(2023, 2, 28).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2024, 2, 29).unwrap();
+    let dcf = day_count_fraction(&start, &end, DayCount::Thirty360US, None, None).unwrap();
+    assert!((dcf - 1.0).abs() < 1e-9);
+}
+
+#[test]
+fn dcf_thirty360us_differs_from_d30360euro_for_february_test() {
+    // Confirms Rule 2 produces a different result than D30360Euro.
+    // D30360Euro does not treat Feb EOM as day 30, so start stays at 28.
+    // start: 2023-02-28, end: 2023-06-15
+    //   Thirty360US: start→30 → res = 105/360
+    //   D30360Euro:  start=28 → res = 107/360
+    let start = NaiveDate::from_ymd_opt(2023, 2, 28).unwrap();
+    let end   = NaiveDate::from_ymd_opt(2023, 6, 15).unwrap();
+    let us  = day_count_fraction(&start, &end, DayCount::Thirty360US,  None, None).unwrap();
+    let eu  = day_count_fraction(&start, &end, DayCount::D30360Euro,   None, None).unwrap();
+    assert!((us  - 105.0 / 360.0).abs() < 1e-9);
+    assert!((eu  - 107.0 / 360.0).abs() < 1e-9);
+    assert_ne!(round_decimals(us), round_decimals(eu));
+}
+
+#[test]
 fn dcf_non_bd252_conventions_return_ok_without_calendar_test() {
     let start = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
@@ -211,8 +303,10 @@ fn dcf_non_bd252_conventions_return_ok_without_calendar_test() {
     for dc in [
         DayCount::Act360,
         DayCount::Act365,
+        DayCount::Act365Fixed,
         DayCount::ActActISDA,
         DayCount::D30360Euro,
+        DayCount::Thirty360US,
         DayCount::D30365,
     ] {
         assert!(
